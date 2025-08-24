@@ -20,17 +20,15 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "mammoth": "^1.6.0",
     "mongoose": "^8.6.0",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
-    "validator": "^13.11.0",
-    "@huggingface/inference": "^2.8.1",
     "pdf-parse": "^1.1.1",
-    "mammoth": "^1.6.0",
-    "tesseract.js": "^5.1.0"
+    "tesseract.js": "^5.1.0",
+    "validator": "^13.11.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
   }
 }
-

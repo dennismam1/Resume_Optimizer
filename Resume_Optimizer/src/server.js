@@ -8,14 +8,10 @@ const mongoose = require('mongoose');
 const validator = require('validator');
 require('dotenv').config();
 
-// Hugging Face + extractors
-let HfInference;
+// Text extractors and HTTP client
 let pdfParse;
 let mammoth;
 let Tesseract;
-try {
-  ({ HfInference } = require('@huggingface/inference'));
-} catch (e) {}
 try {
   pdfParse = require('pdf-parse');
 } catch (e) {}
@@ -92,9 +88,38 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Test Nebius API
+app.get('/api/test-nebius', async (req, res) => {
+  try {
+    if (!NEBIUS_API_KEY || NEBIUS_API_KEY === 'your-nebius-api-key-here') {
+      return res.status(500).json({ error: 'Nebius API key not configured' });
+    }
+    
+    const testPrompt = 'Extract JSON from this resume: John Doe, email: john@test.com, skills: JavaScript. Return: {"name": "John Doe", "email": "john@test.com", "skills": ["JavaScript"]}';
+    
+    const response = await callNebius(testPrompt);
+    
+    res.json({
+      success: true,
+      model: NEBIUS_MODEL_ID,
+      response: response,
+      generated_text: response
+    });
+  } catch (error) {
+    console.error('Nebius Test Error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      model: NEBIUS_MODEL_ID,
+      apiKeyPrefix: NEBIUS_API_KEY.substring(0, 8) + '...'
+    });
+  }
+});
+
 // --- Utilities ---
-const HF_API_KEY = process.env.HF_API_KEY || process.env.HUGGINGFACE_API_KEY;
-const HF_MODEL_ID = process.env.HF_MODEL_ID || 'HuggingFaceH4/zephyr-7b-beta';
+// Nebius Studio configuration
+const NEBIUS_API_KEY = process.env.NEBIUS_API_KEY || 'eyJhbGciOiJIUzI1NiIsImtpZCI6IlV6SXJWd1h0dnprLVRvdzlLZWstc0M1akptWXBvX1VaVkxUZlpnMDRlOFUiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJnb29nbGUtb2F1dGgyfDExNDQzMDU5NjYxOTQ1OTY5MTE1MyIsInNjb3BlIjoib3BlbmlkIG9mZmxpbmVfYWNjZXNzIiwiaXNzIjoiYXBpX2tleV9pc3N1ZXIiLCJhdWQiOlsiaHR0cHM6Ly9uZWJpdXMtaW5mZXJlbmNlLmV1LmF1dGgwLmNvbS9hcGkvdjIvIl0sImV4cCI6MTkxMzcyMjgwOSwidXVpZCI6IjdkNWFmOTZmLTBiODQtNDA5NS1iZWU4LThhMGNiN2Q5M2M4YiIsIm5hbWUiOiJEZW5uaXMiLCJleHBpcmVzX2F0IjoiMjAzMC0wOC0yM1QxMzo0MDowOSswMDAwIn0.pC5PTOOdZYMhEDV5KeCqGurz2X2bcbIg1p23S-zkQXo';
+const NEBIUS_MODEL_ID = process.env.NEBIUS_MODEL_ID || 'meta-llama/Llama-3.3-70B-Instruct';
+const NEBIUS_API_URL = 'https://api.studio.nebius.com/v1/chat/completions';
 
 /**
  * Extract plain text from an uploaded file based on its MIME type
@@ -164,26 +189,64 @@ function buildPrompt(resumeText, filters, freeformMessage) {
   return instructions;
 }
 
-async function callHuggingFace(prompt) {
-  if (!HfInference || !HF_API_KEY) {
-    throw new Error('Missing Hugging Face setup. Set HF_API_KEY and install @huggingface/inference');
+async function callNebius(prompt) {
+  if (!NEBIUS_API_KEY || NEBIUS_API_KEY === 'your-nebius-api-key-here') {
+    throw new Error('Missing Nebius API key. Set NEBIUS_API_KEY environment variable.');
   }
-  const hf = new HfInference(HF_API_KEY);
 
-  // Use text generation with a strong JSON instruction
-  const { generated_text } = await hf.textGeneration({
-    model: HF_MODEL_ID,
-    inputs: prompt,
-    parameters: {
-      max_new_tokens: 512,
+  try {
+    console.log('Calling Nebius with model:', NEBIUS_MODEL_ID);
+    console.log('API Key starts with:', NEBIUS_API_KEY.substring(0, 8) + '...');
+    
+    const requestBody = {
+      model: NEBIUS_MODEL_ID,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a helpful assistant that extracts structured information from resumes and returns valid JSON.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: 512,
       temperature: 0.2,
-      return_full_text: false,
-      do_sample: true,
-      repetition_penalty: 1.05
-    }
-  });
+      top_p: 0.9
+    };
 
-  return typeof generated_text === 'string' ? generated_text : String(generated_text);
+    const response = await fetch(NEBIUS_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NEBIUS_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Nebius API call failed with status ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('Nebius Response object:', data);
+    
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      return data.choices[0].message.content;
+    } else {
+      throw new Error('Unexpected response format from Nebius API');
+    }
+  } catch (error) {
+    console.error('Nebius API Error:', error);
+    if (error.message.includes('401')) {
+      throw new Error('Invalid Nebius API key. Check your NEBIUS_API_KEY.');
+    }
+    if (error.message.includes('404')) {
+      throw new Error(`Model ${NEBIUS_MODEL_ID} not found. Try a different model.`);
+    }
+    throw new Error(`Nebius API error: ${error.message}`);
+  }
 }
 
 function extractJsonFromString(text) {
@@ -215,14 +278,12 @@ function extractJsonFromString(text) {
 }
 
 // Analyze a resume file + optional filters/message → structured JSON
+
+// need to code this line clean
 app.post('/api/analyze', upload.single('file'), async (req, res) => {
   try {
     const uploadedFile = req.file || null;
-    const { filters, message } = req.body;
-
-    if (!uploadedFile && !(req.body && req.body.text)) {
-      return res.status(400).json({ error: 'Provide a resume file or raw text in "text".' });
-    }
+    const { filters, message, submissionId, fileStoredName } = req.body;
 
     const filtersArray = (() => {
       if (!filters) return [];
@@ -238,24 +299,49 @@ app.post('/api/analyze', upload.single('file'), async (req, res) => {
     })();
 
     let resumeText = '';
-    if (uploadedFile) {
+    // Priority: submissionId → uploaded file → fileStoredName → raw text
+    if (submissionId) {
+      const item = await Submission.findById(String(submissionId)).lean();
+      if (!item) {
+        return res.status(404).json({ error: 'Submission not found' });
+      }
+      if (!item.filePath || !item.fileMimeType) {
+        return res.status(400).json({ error: 'Submission has no stored file to analyze' });
+      }
+      resumeText = await extractTextFromFile(item.filePath, item.fileMimeType);
+      if (!resumeText || resumeText.trim().length === 0) {
+        return res.status(422).json({ error: 'Failed to extract text from the stored file.' });
+      }
+    } else if (uploadedFile) {
       resumeText = await extractTextFromFile(uploadedFile.path, uploadedFile.mimetype);
       if (!resumeText || resumeText.trim().length === 0) {
         return res.status(422).json({ error: 'Failed to extract text from the uploaded file.' });
       }
-    } else {
+    } else if (fileStoredName) {
+      const item = await Submission.findOne({ fileStoredName: String(fileStoredName) }).lean();
+      if (!item) {
+        return res.status(404).json({ error: 'Submission with given fileStoredName not found' });
+      }
+      resumeText = await extractTextFromFile(item.filePath, item.fileMimeType);
+      if (!resumeText || resumeText.trim().length === 0) {
+        return res.status(422).json({ error: 'Failed to extract text from the stored file.' });
+      }
+    } else if (req.body && req.body.text) {
       const raw = String(req.body.text || '');
       resumeText = raw;
+    } else {
+      return res.status(400).json({ error: 'Provide a submissionId, a resume file, a fileStoredName, or raw text in "text".' });
     }
 
     const prompt = buildPrompt(resumeText, filtersArray, message);
-    const rawResponse = await callHuggingFace(prompt);
+    const rawResponse = await callNebius(prompt);
+    console.log('Nebius Raw Response:', rawResponse); // Debug log
     const json = extractJsonFromString(rawResponse);
 
     if (!json) {
       return res.status(200).json({
         ok: true,
-        model: HF_MODEL_ID,
+        model: NEBIUS_MODEL_ID,
         usedFilters: filtersArray,
         structured: null,
         raw: rawResponse
@@ -264,7 +350,7 @@ app.post('/api/analyze', upload.single('file'), async (req, res) => {
 
     res.json({
       ok: true,
-      model: HF_MODEL_ID,
+      model: NEBIUS_MODEL_ID,
       usedFilters: filtersArray,
       structured: json,
       raw: rawResponse

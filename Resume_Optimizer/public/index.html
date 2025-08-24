@@ -76,12 +76,46 @@
           ${item.fileOriginalName ? `<div><strong>File</strong>: <a href="/uploads/${item.fileStoredName}" target="_blank" rel="noopener">${item.fileOriginalName}</a> <span class="muted">(${item.fileMimeType || ''}, ${item.fileSize || 0} bytes)</span></div>` : ''}
           ${item.linkUrl ? `<div><strong>Link</strong>: <a href="${item.linkUrl}" target="_blank" rel="noopener">${item.linkUrl}</a></div>` : ''}
           ${item.message ? `<div><strong>Message</strong>: ${item.message}</div>` : ''}
+          <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+            <button data-action="analyze" data-id="${item._id}" ${item.fileStoredName ? '' : 'disabled'}>Analyze</button>
+            <span class="muted" id="analyze-status-${item._id}"></span>
+          </div>
+          <pre class="muted" id="analyze-output-${item._id}" style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px; display:none;"></pre>
         `;
         list.appendChild(div);
       });
       if (!list.children.length) {
         list.innerHTML = '<div class="muted">No submissions yet.</div>';
       }
+
+      // Wire analyze buttons
+      list.querySelectorAll('button[data-action="analyze"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-id');
+          const statusEl = document.getElementById(`analyze-status-${id}`);
+          const outEl = document.getElementById(`analyze-output-${id}`);
+          statusEl.textContent = 'Analyzing...';
+          outEl.style.display = 'none';
+          outEl.textContent = '';
+          btn.disabled = true;
+          try {
+            const form = new FormData();
+            form.append('submissionId', id);
+            // Optional: pass filters from a prompt or UI later
+            const res = await fetch('/api/analyze', { method: 'POST', body: form });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'Failed to analyze');
+            statusEl.textContent = json.structured ? 'Done' : 'Done (raw shown)';
+            const pretty = json.structured ? JSON.stringify(json.structured, null, 2) : (json.raw || '');
+            outEl.textContent = pretty;
+            outEl.style.display = 'block';
+          } catch (err) {
+            statusEl.textContent = err.message;
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      });
     }
 
     window.addEventListener('DOMContentLoaded', loadRecent);
