@@ -56,9 +56,10 @@
       }
     }
 
-    function fileChanged(input) {
-      const label = document.getElementById('file-label');
-      label.textContent = input.files && input.files[0] ? input.files[0].name : 'Choose file...';
+    function fileChanged(input, labelId) {
+      const label = document.getElementById(labelId);
+      const defaultText = labelId === 'file-label' ? 'Choose resume file...' : 'Choose job posting file...';
+      label.textContent = input.files && input.files[0] ? input.files[0].name : defaultText;
     }
 
     async function loadRecent() {
@@ -73,11 +74,12 @@
         const dt = new Date(item.createdAt).toLocaleString();
         div.innerHTML = `
           <div><strong>Created</strong>: ${dt}</div>
-          ${item.fileOriginalName ? `<div><strong>File</strong>: <a href="/uploads/${item.fileStoredName}" target="_blank" rel="noopener">${item.fileOriginalName}</a> <span class="muted">(${item.fileMimeType || ''}, ${item.fileSize || 0} bytes)</span></div>` : ''}
-          ${item.linkUrl ? `<div><strong>Link</strong>: <a href="${item.linkUrl}" target="_blank" rel="noopener">${item.linkUrl}</a></div>` : ''}
+          ${item.fileOriginalName ? `<div><strong>Resume</strong>: <a href="/uploads/${item.fileStoredName}" target="_blank" rel="noopener">${item.fileOriginalName}</a> <span class="muted">(${item.fileMimeType || ''}, ${item.fileSize || 0} bytes)</span></div>` : ''}
+          ${item.jobPostOriginalName ? `<div><strong>Job Posting</strong>: <a href="/uploads/${item.jobPostStoredName}" target="_blank" rel="noopener">${item.jobPostOriginalName}</a> <span class="muted">(${item.jobPostMimeType || ''}, ${item.jobPostFileSize || 0} bytes)</span></div>` : ''}
           ${item.message ? `<div><strong>Message</strong>: ${item.message}</div>` : ''}
           <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
-            <button data-action="analyze" data-id="${item._id}" ${item.fileStoredName ? '' : 'disabled'}>Analyze</button>
+            <button data-action="analyze" data-id="${item._id}" ${item.fileStoredName ? '' : 'disabled'}>Analyze Resume</button>
+            ${item.fileStoredName && item.jobPostStoredName ? `<button data-action="ats-score" data-id="${item._id}">Calculate ATS Score</button>` : ''}
             <span class="muted" id="analyze-status-${item._id}"></span>
           </div>
           <pre class="muted" id="analyze-output-${item._id}" style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px; display:none;"></pre>
@@ -116,6 +118,35 @@
           }
         });
       });
+
+      // Wire ATS score buttons
+      list.querySelectorAll('button[data-action="ats-score"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-id');
+          const statusEl = document.getElementById(`analyze-status-${id}`);
+          const outEl = document.getElementById(`analyze-output-${id}`);
+          statusEl.textContent = 'Calculating ATS Score...';
+          outEl.style.display = 'none';
+          outEl.textContent = '';
+          btn.disabled = true;
+          try {
+            const form = new FormData();
+            form.append('submissionId', id);
+            form.append('calculateATS', 'true');
+            const res = await fetch('/api/analyze', { method: 'POST', body: form });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'Failed to calculate ATS score');
+            statusEl.textContent = 'ATS Score Calculated';
+            const pretty = JSON.stringify(json, null, 2);
+            outEl.textContent = pretty;
+            outEl.style.display = 'block';
+          } catch (err) {
+            statusEl.textContent = err.message;
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      });
     }
 
     window.addEventListener('DOMContentLoaded', loadRecent);
@@ -124,18 +155,19 @@
 <body>
   <div class="container">
     <h1>Resume Optimizer - Submit</h1>
-    <p class="helper">Upload a file (PDF/Image/Word), paste a web link, and/or type a message. Submit at least one.</p>
+    <p class="helper">Upload your resume and job posting files (PDF/Image/Word), and/or type a message. Submit at least one.</p>
 
     <form id="upload-form" class="card" onsubmit="submitForm(event)" enctype="multipart/form-data">
       <div class="row">
-        <label for="file">File</label>
-        <input id="file" name="file" type="file" accept=".pdf,.doc,.docx,image/*" onchange="fileChanged(this)" />
-        <div class="muted" id="file-label">Choose file...</div>
+        <label for="file">Resume File</label>
+        <input id="file" name="file" type="file" accept=".pdf,.doc,.docx,image/*" onchange="fileChanged(this, 'file-label')" />
+        <div class="muted" id="file-label">Choose resume file...</div>
       </div>
 
       <div class="row">
-        <label for="link">Web link (include https://)</label>
-        <input id="link" name="link" type="url" placeholder="https://example.com" />
+        <label for="jobPost">Job Posting File</label>
+        <input id="jobPost" name="jobPost" type="file" accept=".pdf,.doc,.docx,image/*" onchange="fileChanged(this, 'jobpost-label')" />
+        <div class="muted" id="jobpost-label">Choose job posting file...</div>
       </div>
 
       <div class="row">

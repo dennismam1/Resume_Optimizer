@@ -277,13 +277,86 @@ function extractJsonFromString(text) {
   return null;
 }
 
+function buildJobPostingKeywordPrompt(jobPostingText) {
+  return `You are a keyword extraction system for job postings. Extract key requirements, skills, technologies, and qualifications from the following job posting.
+
+Requirements:
+- Output ONLY valid JSON.
+- Extract keywords in these categories: "required_skills", "preferred_skills", "technologies", "experience_level", "education", "certifications", "soft_skills"
+- Use arrays for skills and technologies
+- Use strings for experience_level and education
+- Keep values concise and standardized
+
+Job Posting:
+"""
+${jobPostingText}
+"""
+
+Return JSON only.`;
+}
+
+function calculateSemanticSimilarity(resumeData, jobPostingData) {
+  // Simple keyword matching algorithm - can be enhanced with more sophisticated NLP
+  const resumeSkills = new Set();
+  const jobRequiredSkills = new Set();
+  const jobPreferredSkills = new Set();
+
+  // Extract skills from resume
+  if (resumeData.skills && Array.isArray(resumeData.skills)) {
+    resumeData.skills.forEach(skill => resumeSkills.add(skill.toLowerCase()));
+  }
+
+  // Extract skills from job posting
+  if (jobPostingData.required_skills && Array.isArray(jobPostingData.required_skills)) {
+    jobPostingData.required_skills.forEach(skill => jobRequiredSkills.add(skill.toLowerCase()));
+  }
+  if (jobPostingData.preferred_skills && Array.isArray(jobPostingData.preferred_skills)) {
+    jobPostingData.preferred_skills.forEach(skill => jobPreferredSkills.add(skill.toLowerCase()));
+  }
+  if (jobPostingData.technologies && Array.isArray(jobPostingData.technologies)) {
+    jobPostingData.technologies.forEach(tech => jobRequiredSkills.add(tech.toLowerCase()));
+  }
+
+  // Calculate matches
+  const requiredMatches = [...jobRequiredSkills].filter(skill => resumeSkills.has(skill));
+  const preferredMatches = [...jobPreferredSkills].filter(skill => resumeSkills.has(skill));
+
+  // Calculate scores
+  const requiredScore = jobRequiredSkills.size > 0 ? (requiredMatches.length / jobRequiredSkills.size) * 100 : 0;
+  const preferredScore = jobPreferredSkills.size > 0 ? (preferredMatches.length / jobPreferredSkills.size) * 100 : 0;
+  const overallScore = (requiredScore * 0.7) + (preferredScore * 0.3); // Weight required skills more
+
+  return {
+    ats_score: Math.round(overallScore),
+    required_skills_match: {
+      matched: requiredMatches,
+      total_required: jobRequiredSkills.size,
+      match_percentage: Math.round(requiredScore)
+    },
+    preferred_skills_match: {
+      matched: preferredMatches,
+      total_preferred: jobPreferredSkills.size,
+      match_percentage: Math.round(preferredScore)
+    },
+    missing_skills: {
+      required: [...jobRequiredSkills].filter(skill => !resumeSkills.has(skill)),
+      preferred: [...jobPreferredSkills].filter(skill => !resumeSkills.has(skill))
+    },
+    resume_skills: [...resumeSkills],
+    job_requirements: {
+      required_skills: [...jobRequiredSkills],
+      preferred_skills: [...jobPreferredSkills]
+    }
+  };
+}
+
 // Analyze a resume file + optional filters/message → structured JSON
 
 // need to code this line clean
 app.post('/api/analyze', upload.single('file'), async (req, res) => {
   try {
     const uploadedFile = req.file || null;
-    const { filters, message, submissionId, fileStoredName } = req.body;
+    const { filters, message, submissionId, fileStoredName, calculateATS } = req.body;
 
     const filtersArray = (() => {
       if (!filters) return [];
@@ -333,6 +406,63 @@ app.post('/api/analyze', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'Provide a submissionId, a resume file, a fileStoredName, or raw text in "text".' });
     }
 
+    // Handle ATS score calculation
+    if (calculateATS === 'true') {
+      // Get the submission to access job posting
+      let item;
+      if (submissionId) {
+        item = await Submission.findById(String(submissionId)).lean();
+        if (!item) {
+          return res.status(404).json({ error: 'Submission not found' });
+        }
+      } else {
+        return res.status(400).json({ error: 'submissionId required for ATS calculation' });
+      }
+
+      if (!item.jobPostFilePath || !item.jobPostMimeType) {
+        return res.status(400).json({ error: 'No job posting file found in submission' });
+      }
+
+      // Extract text from job posting
+      const jobPostingText = await extractTextFromFile(item.jobPostFilePath, item.jobPostMimeType);
+      if (!jobPostingText || jobPostingText.trim().length === 0) {
+        return res.status(422).json({ error: 'Failed to extract text from job posting file' });
+      }
+
+      // Extract resume data
+      const resumePrompt = buildPrompt(resumeText, filtersArray, message);
+      const resumeResponse = await callNebius(resumePrompt);
+      const resumeData = extractJsonFromString(resumeResponse);
+
+      // Extract job posting data
+      const jobPostingPrompt = buildJobPostingKeywordPrompt(jobPostingText);
+      const jobPostingResponse = await callNebius(jobPostingPrompt);
+      const jobPostingData = extractJsonFromString(jobPostingResponse);
+
+      if (!resumeData || !jobPostingData) {
+        return res.status(200).json({
+          ok: true,
+          model: NEBIUS_MODEL_ID,
+          error: 'Failed to parse resume or job posting data',
+          resume_raw: resumeResponse,
+          job_posting_raw: jobPostingResponse
+        });
+      }
+
+      // Calculate ATS score
+      const atsResult = calculateSemanticSimilarity(resumeData, jobPostingData);
+
+      return res.json({
+        ok: true,
+        model: NEBIUS_MODEL_ID,
+        type: 'ats_analysis',
+        resume_analysis: resumeData,
+        job_posting_analysis: jobPostingData,
+        ats_result: atsResult
+      });
+    }
+
+    // Regular resume analysis
     const prompt = buildPrompt(resumeText, filtersArray, message);
     const rawResponse = await callNebius(prompt);
     console.log('Nebius Raw Response:', rawResponse); // Debug log
@@ -361,32 +491,32 @@ app.post('/api/analyze', upload.single('file'), async (req, res) => {
   }
 });
 
-// Create submission
-app.post('/api/submissions', upload.single('file'), async (req, res) => {
+// Create submission with both resume and job posting files
+app.post('/api/submissions', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'jobPost', maxCount: 1 }]), async (req, res) => {
   try {
-    const { link, message } = req.body;
-    const uploadedFile = req.file || null;
+    const { message } = req.body;
+    const resumeFile = req.files && req.files['file'] ? req.files['file'][0] : null;
+    const jobPostFile = req.files && req.files['jobPost'] ? req.files['jobPost'][0] : null;
 
-    if (!uploadedFile && !link && !message) {
-      return res.status(400).json({ error: 'Provide at least a file, a link, or a message.' });
-    }
-
-    let linkUrl = undefined;
-    if (link && link.trim().length > 0) {
-      const trimmed = link.trim();
-      if (!validator.isURL(trimmed, { require_protocol: true })) {
-        return res.status(400).json({ error: 'Invalid link. Include protocol, e.g., https://example.com' });
-      }
-      linkUrl = trimmed;
+    if (!resumeFile && !jobPostFile && !message) {
+      return res.status(400).json({ error: 'Provide at least a resume file, job posting file, or a message.' });
     }
 
     const newSubmission = new Submission({
-      fileOriginalName: uploadedFile ? uploadedFile.originalname : undefined,
-      fileStoredName: uploadedFile ? path.basename(uploadedFile.path) : undefined,
-      fileMimeType: uploadedFile ? uploadedFile.mimetype : undefined,
-      filePath: uploadedFile ? uploadedFile.path : undefined,
-      fileSize: uploadedFile ? uploadedFile.size : undefined,
-      linkUrl,
+      // Resume file
+      fileOriginalName: resumeFile ? resumeFile.originalname : undefined,
+      fileStoredName: resumeFile ? path.basename(resumeFile.path) : undefined,
+      fileMimeType: resumeFile ? resumeFile.mimetype : undefined,
+      filePath: resumeFile ? resumeFile.path : undefined,
+      fileSize: resumeFile ? resumeFile.size : undefined,
+      
+      // Job posting file
+      jobPostOriginalName: jobPostFile ? jobPostFile.originalname : undefined,
+      jobPostStoredName: jobPostFile ? path.basename(jobPostFile.path) : undefined,
+      jobPostMimeType: jobPostFile ? jobPostFile.mimetype : undefined,
+      jobPostFilePath: jobPostFile ? jobPostFile.path : undefined,
+      jobPostFileSize: jobPostFile ? jobPostFile.size : undefined,
+      
       message: message && message.trim().length > 0 ? message.trim() : undefined,
     });
 

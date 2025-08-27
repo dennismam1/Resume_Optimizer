@@ -13,16 +13,19 @@ const FileSchema = new mongoose.Schema(
 
 const SubmissionSchema = new mongoose.Schema(
   {
+    // Resume file
     fileOriginalName: { type: String },
     fileStoredName: { type: String },
     fileMimeType: { type: String },
     filePath: { type: String },
     fileSize: { type: Number, min: 0 },
 
-    linkUrl: {
-      type: String,
-      trim: true,
-    },
+    // Job posting file
+    jobPostOriginalName: { type: String },
+    jobPostStoredName: { type: String },
+    jobPostMimeType: { type: String },
+    jobPostFilePath: { type: String },
+    jobPostFileSize: { type: Number, min: 0 },
 
     message: {
       type: String,
