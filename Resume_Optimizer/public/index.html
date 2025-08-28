@@ -23,6 +23,129 @@
     .muted { color: #777; font-size: 0.9rem; }
     .success { color: #137333; }
     .error { color: #b00020; }
+    
+    /* ATS Scorecard Styles */
+    .ats-scorecard { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 16px 0;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    .ats-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .ats-score-circle {
+      display: inline-block;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, #00d4aa var(--percentage), rgba(255,255,255,0.2) var(--percentage));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      position: relative;
+    }
+    .ats-score-circle::before {
+      content: '';
+      position: absolute;
+      width: 90px;
+      height: 90px;
+      background: white;
+      border-radius: 50%;
+    }
+    .ats-score-text {
+      position: relative;
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+    .ats-title {
+      font-size: 18px;
+      margin: 0;
+      opacity: 0.9;
+    }
+    .ats-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .ats-metric {
+      background: rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+    .ats-metric-value {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .ats-metric-label {
+      font-size: 12px;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .ats-skills-section {
+      margin-top: 20px;
+    }
+    .ats-skills-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .ats-skills-column {
+      background: rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .ats-skills-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .ats-skill-tag {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      margin: 2px;
+    }
+    .ats-skill-matched {
+      background: #00d4aa;
+      color: white;
+    }
+    .ats-skill-missing {
+      background: #ff6b6b;
+      color: white;
+    }
+    .ats-progress-bar {
+      width: 100%;
+      height: 8px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+    .ats-progress-fill {
+      height: 100%;
+      background: #00d4aa;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+    @media (max-width: 768px) {
+      .ats-metrics, .ats-skills-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
   <script>
     async function submitForm(e) {
@@ -62,6 +185,103 @@
       label.textContent = input.files && input.files[0] ? input.files[0].name : defaultText;
     }
 
+    function renderATSScorecard(data, containerId) {
+      const container = document.getElementById(containerId);
+      if (!data.ats_result) {
+        container.innerHTML = '<div class="error">No ATS result data available</div>';
+        return;
+      }
+
+      const ats = data.ats_result;
+      const scorePercentage = (ats.ats_score / 100) * 360; // Convert to degrees for conic-gradient
+
+      const scorecardHTML = `
+        <div class="ats-scorecard">
+          <div class="ats-header">
+            <div class="ats-score-circle" style="--percentage: ${scorePercentage}deg;">
+              <span class="ats-score-text">${ats.ats_score}%</span>
+            </div>
+            <h3 class="ats-title">ATS Compatibility Score</h3>
+          </div>
+          
+          <div class="ats-metrics">
+            <div class="ats-metric">
+              <div class="ats-metric-value">${ats.required_skills_match.match_percentage}%</div>
+              <div class="ats-metric-label">Required Skills Match</div>
+              <div class="ats-progress-bar">
+                <div class="ats-progress-fill" style="width: ${ats.required_skills_match.match_percentage}%"></div>
+              </div>
+              <div style="font-size: 11px; opacity: 0.8;">
+                ${ats.required_skills_match.matched.length} of ${ats.required_skills_match.total_required} skills
+              </div>
+            </div>
+            <div class="ats-metric">
+              <div class="ats-metric-value">${ats.preferred_skills_match.match_percentage}%</div>
+              <div class="ats-metric-label">Preferred Skills Match</div>
+              <div class="ats-progress-bar">
+                <div class="ats-progress-fill" style="width: ${ats.preferred_skills_match.match_percentage}%"></div>
+              </div>
+              <div style="font-size: 11px; opacity: 0.8;">
+                ${ats.preferred_skills_match.matched.length} of ${ats.preferred_skills_match.total_preferred} skills
+              </div>
+            </div>
+          </div>
+
+          <div class="ats-skills-section">
+            <div class="ats-skills-grid">
+              <div class="ats-skills-column">
+                <div class="ats-skills-title">✅ Matched Skills</div>
+                <div>
+                  ${[...ats.required_skills_match.matched, ...ats.preferred_skills_match.matched]
+                    .filter((skill, index, self) => self.indexOf(skill) === index)
+                    .map(skill => `<span class="ats-skill-tag ats-skill-matched">${skill}</span>`)
+                    .join('')}
+                  ${[...ats.required_skills_match.matched, ...ats.preferred_skills_match.matched].length === 0 ? 
+                    '<span class="ats-skill-tag">No matched skills found</span>' : ''}
+                </div>
+              </div>
+              <div class="ats-skills-column">
+                <div class="ats-skills-title">❌ Missing Skills</div>
+                <div>
+                  ${[...ats.missing_skills.required, ...ats.missing_skills.preferred]
+                    .filter((skill, index, self) => self.indexOf(skill) === index)
+                    .map(skill => `<span class="ats-skill-tag ats-skill-missing">${skill}</span>`)
+                    .join('')}
+                  ${[...ats.missing_skills.required, ...ats.missing_skills.preferred].length === 0 ? 
+                    '<span class="ats-skill-tag">All skills matched!</span>' : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ats-skills-section">
+            <div class="ats-skills-grid">
+              <div class="ats-skills-column">
+                <div class="ats-skills-title">📄 Your Resume Skills</div>
+                <div>
+                  ${ats.resume_skills.map(skill => `<span class="ats-skill-tag">${skill}</span>`).join('')}
+                  ${ats.resume_skills.length === 0 ? '<span class="ats-skill-tag">No skills extracted</span>' : ''}
+                </div>
+              </div>
+              <div class="ats-skills-column">
+                <div class="ats-skills-title">🎯 Job Requirements</div>
+                <div>
+                  ${[...ats.job_requirements.required_skills, ...ats.job_requirements.preferred_skills]
+                    .filter((skill, index, self) => self.indexOf(skill) === index)
+                    .map(skill => `<span class="ats-skill-tag">${skill}</span>`)
+                    .join('')}
+                  ${[...ats.job_requirements.required_skills, ...ats.job_requirements.preferred_skills].length === 0 ? 
+                    '<span class="ats-skill-tag">No requirements extracted</span>' : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = scorecardHTML;
+    }
+
     async function loadRecent() {
       const list = document.getElementById('recent');
       list.innerHTML = '<div class="muted">Loading...</div>';
@@ -82,7 +302,7 @@
             ${item.fileStoredName && item.jobPostStoredName ? `<button data-action="ats-score" data-id="${item._id}">Calculate ATS Score</button>` : ''}
             <span class="muted" id="analyze-status-${item._id}"></span>
           </div>
-          <pre class="muted" id="analyze-output-${item._id}" style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px; display:none;"></pre>
+          <div class="muted" id="analyze-output-${item._id}" style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px; display:none;"></div>
         `;
         list.appendChild(div);
       });
@@ -98,7 +318,7 @@
           const outEl = document.getElementById(`analyze-output-${id}`);
           statusEl.textContent = 'Analyzing...';
           outEl.style.display = 'none';
-          outEl.textContent = '';
+          outEl.innerHTML = '';
           btn.disabled = true;
           try {
             const form = new FormData();
@@ -109,7 +329,7 @@
             if (!res.ok) throw new Error(json.error || 'Failed to analyze');
             statusEl.textContent = json.structured ? 'Done' : 'Done (raw shown)';
             const pretty = json.structured ? JSON.stringify(json.structured, null, 2) : (json.raw || '');
-            outEl.textContent = pretty;
+            outEl.innerHTML = `<pre style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px; margin:0;">${pretty}</pre>`;
             outEl.style.display = 'block';
           } catch (err) {
             statusEl.textContent = err.message;
@@ -127,7 +347,7 @@
           const outEl = document.getElementById(`analyze-output-${id}`);
           statusEl.textContent = 'Calculating ATS Score...';
           outEl.style.display = 'none';
-          outEl.textContent = '';
+          outEl.innerHTML = '';
           btn.disabled = true;
           try {
             const form = new FormData();
@@ -137,8 +357,14 @@
             const json = await res.json();
             if (!res.ok) throw new Error(json.error || 'Failed to calculate ATS score');
             statusEl.textContent = 'ATS Score Calculated';
-            const pretty = JSON.stringify(json, null, 2);
-            outEl.textContent = pretty;
+            
+            // Check if we have ATS result data and render scorecard
+            if (json.ats_result) {
+              renderATSScorecard(json, `analyze-output-${id}`);
+            } else {
+              // Fallback to JSON display if no ATS result
+              outEl.innerHTML = `<pre style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px;">${JSON.stringify(json, null, 2)}</pre>`;
+            }
             outEl.style.display = 'block';
           } catch (err) {
             statusEl.textContent = err.message;
