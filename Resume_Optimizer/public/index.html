@@ -146,6 +146,92 @@
         grid-template-columns: 1fr;
       }
     }
+
+    /* Cover Letter Styles */
+    .cover-letter-section {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 16px 0;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    .cover-letter-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .cover-letter-title {
+      font-size: 20px;
+      margin: 0 0 8px 0;
+      opacity: 0.9;
+    }
+    .cover-letter-subtitle {
+      font-size: 14px;
+      opacity: 0.7;
+    }
+    .cover-letter-content {
+      background: rgba(255,255,255,0.95);
+      color: #333;
+      border-radius: 8px;
+      padding: 20px;
+      font-family: 'Georgia', serif;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    .cover-letter-actions {
+      margin-top: 16px;
+      text-align: center;
+    }
+    .copy-button {
+      background: #00d4aa;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s ease;
+    }
+    .copy-button:hover {
+      background: #00b894;
+    }
+    .copy-button:active {
+      background: #00a085;
+    }
+    .export-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .export-button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .export-button:hover {
+      background: #5a6fd8;
+    }
+    .export-button:active {
+      background: #4c63d2;
+    }
+    .export-button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
   </style>
   <script>
     async function submitForm(e) {
@@ -282,6 +368,139 @@
       container.innerHTML = scorecardHTML;
     }
 
+    function renderCoverLetter(data, containerId) {
+      const container = document.getElementById(containerId);
+      if (!data.cover_letter) {
+        container.innerHTML = '<div class="error">No cover letter data available</div>';
+        return;
+      }
+
+      // Extract submission ID from container ID (format: analyze-output-{submissionId})
+      const submissionId = containerId.replace('analyze-output-', '');
+
+      const coverLetterDiv = document.createElement('div');
+      coverLetterDiv.innerHTML = `
+        <div class="cover-letter-section">
+          <div class="cover-letter-header">
+            <h3 class="cover-letter-title">📄 Generated Cover Letter</h3>
+            <div class="cover-letter-subtitle">Personalized based on your resume and the job posting</div>
+          </div>
+          
+          <div class="cover-letter-content">${data.cover_letter}</div>
+          
+          <div class="cover-letter-actions">
+            <button class="copy-button" id="copy-btn-${containerId}">
+              📋 Copy Cover Letter
+            </button>
+            <div class="export-buttons">
+              <button class="export-button" id="export-word-${containerId}">
+                📄 Export as Word
+              </button>
+              <button class="export-button" id="export-pdf-${containerId}">
+                📑 Export as PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = '';
+      container.appendChild(coverLetterDiv);
+
+      // Add event listener for copy button
+      const copyBtn = document.getElementById(`copy-btn-${containerId}`);
+      copyBtn.addEventListener('click', () => {
+        copyCoverLetter(copyBtn, data.cover_letter);
+      });
+
+      // Add event listeners for export buttons
+      const exportWordBtn = document.getElementById(`export-word-${containerId}`);
+      const exportPdfBtn = document.getElementById(`export-pdf-${containerId}`);
+
+      exportWordBtn.addEventListener('click', () => {
+        exportCoverLetter(submissionId, 'word', exportWordBtn);
+      });
+
+      exportPdfBtn.addEventListener('click', () => {
+        exportCoverLetter(submissionId, 'pdf', exportPdfBtn);
+      });
+    }
+
+    function copyCoverLetter(button, text) {
+      navigator.clipboard.writeText(text).then(() => {
+        const originalText = button.textContent;
+        button.textContent = '✅ Copied!';
+        button.style.background = '#00b894';
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.style.background = '#00d4aa';
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy text: ', err);
+        button.textContent = '❌ Copy failed';
+        setTimeout(() => {
+          button.textContent = '📋 Copy Cover Letter';
+        }, 2000);
+      });
+    }
+
+    async function exportCoverLetter(submissionId, format, button) {
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = format === 'word' ? '⏳ Generating Word...' : '⏳ Generating PDF...';
+
+      try {
+        const response = await fetch(`/api/export-cover-letter/${format}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ submissionId: submissionId })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || `Failed to export as ${format.toUpperCase()}`);
+        }
+
+        // Get the filename from the response headers
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = `cover_letter.${format === 'word' ? 'docx' : 'pdf'}`;
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+          if (filenameMatch) {
+            filename = filenameMatch[1];
+          }
+        }
+
+        // Create a blob and download the file
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+
+        // Show success message
+        button.textContent = format === 'word' ? '✅ Word Downloaded!' : '✅ PDF Downloaded!';
+        setTimeout(() => {
+          button.textContent = originalText;
+        }, 2000);
+
+      } catch (error) {
+        console.error(`${format.toUpperCase()} export error:`, error);
+        button.textContent = `❌ ${format.toUpperCase()} failed`;
+        setTimeout(() => {
+          button.textContent = originalText;
+        }, 3000);
+      } finally {
+        button.disabled = false;
+      }
+    }
+
     async function loadRecent() {
       const list = document.getElementById('recent');
       list.innerHTML = '<div class="muted">Loading...</div>';
@@ -297,9 +516,10 @@
           ${item.fileOriginalName ? `<div><strong>Resume</strong>: <a href="/uploads/${item.fileStoredName}" target="_blank" rel="noopener">${item.fileOriginalName}</a> <span class="muted">(${item.fileMimeType || ''}, ${item.fileSize || 0} bytes)</span></div>` : ''}
           ${item.jobPostOriginalName ? `<div><strong>Job Posting</strong>: <a href="/uploads/${item.jobPostStoredName}" target="_blank" rel="noopener">${item.jobPostOriginalName}</a> <span class="muted">(${item.jobPostMimeType || ''}, ${item.jobPostFileSize || 0} bytes)</span></div>` : ''}
           ${item.message ? `<div><strong>Message</strong>: ${item.message}</div>` : ''}
-          <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+          <div style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
             <button data-action="analyze" data-id="${item._id}" ${item.fileStoredName ? '' : 'disabled'}>Analyze Resume</button>
             ${item.fileStoredName && item.jobPostStoredName ? `<button data-action="ats-score" data-id="${item._id}">Calculate ATS Score</button>` : ''}
+            <button data-action="cover-letter" data-id="${item._id}" ${item.fileStoredName && item.jobPostStoredName ? '' : 'disabled'}>📄 Generate Cover Letter</button>
             <span class="muted" id="analyze-status-${item._id}"></span>
           </div>
           <div class="muted" id="analyze-output-${item._id}" style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px; display:none;"></div>
@@ -363,6 +583,44 @@
               renderATSScorecard(json, `analyze-output-${id}`);
             } else {
               // Fallback to JSON display if no ATS result
+              outEl.innerHTML = `<pre style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px;">${JSON.stringify(json, null, 2)}</pre>`;
+            }
+            outEl.style.display = 'block';
+          } catch (err) {
+            statusEl.textContent = err.message;
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      });
+
+      // Wire cover letter generation buttons
+      list.querySelectorAll('button[data-action="cover-letter"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-id');
+          const statusEl = document.getElementById(`analyze-status-${id}`);
+          const outEl = document.getElementById(`analyze-output-${id}`);
+          statusEl.textContent = 'Generating Cover Letter...';
+          outEl.style.display = 'none';
+          outEl.innerHTML = '';
+          btn.disabled = true;
+          try {
+            const res = await fetch('/api/generate-cover-letter', { 
+              method: 'POST', 
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ submissionId: id })
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'Failed to generate cover letter');
+            statusEl.textContent = 'Cover Letter Generated';
+            
+            // Render the cover letter
+            if (json.cover_letter) {
+              renderCoverLetter(json, `analyze-output-${id}`);
+            } else {
+              // Fallback to JSON display if no cover letter
               outEl.innerHTML = `<pre style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px;">${JSON.stringify(json, null, 2)}</pre>`;
             }
             outEl.style.display = 'block';
