@@ -13,7 +13,7 @@ const router = express.Router();
 router.post('/generate-cover-letter', async (req, res) => {
   try {
     console.log('Cover letter request body:', req.body);
-    const { submissionId } = req.body;
+    const { submissionId, tone, length } = req.body;
 
     if (!submissionId) {
       console.log('Missing submissionId in request body');
@@ -26,7 +26,7 @@ router.post('/generate-cover-letter', async (req, res) => {
     );
 
     // Generate cover letter using Nebius
-    const coverLetterPrompt = buildCoverLetterPrompt(resumeText, jobPostingText, resumeData, jobPostingData);
+    const coverLetterPrompt = buildCoverLetterPrompt(resumeText, jobPostingText, resumeData, jobPostingData, { tone, length });
     const coverLetterResponse = await callNebius(coverLetterPrompt);
 
     return res.json({
@@ -48,7 +48,7 @@ router.post('/generate-cover-letter', async (req, res) => {
 router.post('/export-cover-letter/word', async (req, res) => {
   try {
     console.log('Word export request body:', req.body);
-    const { submissionId } = req.body;
+    const { submissionId, tone, length } = req.body;
 
     if (!submissionId) {
       return res.status(400).json({ error: 'submissionId is required' });
@@ -60,7 +60,7 @@ router.post('/export-cover-letter/word', async (req, res) => {
     );
 
     // Generate cover letter
-    const coverLetterPrompt = buildCoverLetterPrompt(resumeText, jobPostingText, resumeData, jobPostingData);
+    const coverLetterPrompt = buildCoverLetterPrompt(resumeText, jobPostingText, resumeData, jobPostingData, { tone, length });
     const coverLetterText = await callNebius(coverLetterPrompt);
 
     // Generate Word document
@@ -84,7 +84,7 @@ router.post('/export-cover-letter/word', async (req, res) => {
 router.post('/export-cover-letter/pdf', async (req, res) => {
   try {
     console.log('PDF export request body:', req.body);
-    const { submissionId } = req.body;
+    const { submissionId, tone, length } = req.body;
 
     if (!submissionId) {
       return res.status(400).json({ error: 'submissionId is required' });
@@ -96,7 +96,7 @@ router.post('/export-cover-letter/pdf', async (req, res) => {
     );
 
     // Generate cover letter
-    const coverLetterPrompt = buildCoverLetterPrompt(resumeText, jobPostingText, resumeData, jobPostingData);
+    const coverLetterPrompt = buildCoverLetterPrompt(resumeText, jobPostingText, resumeData, jobPostingData, { tone, length });
     const coverLetterText = await callNebius(coverLetterPrompt);
 
     // Generate PDF document

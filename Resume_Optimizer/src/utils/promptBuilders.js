@@ -50,15 +50,19 @@ Return JSON only.`;
  * @param {Object} jobPostingData - Structured job posting data
  * @returns {string} - Built prompt
  */
-function buildCoverLetterPrompt(resumeText, jobPostingText, resumeData, jobPostingData) {
+function buildCoverLetterPrompt(resumeText, jobPostingText, resumeData, jobPostingData, options = {}) {
+  const selectedTone = options.tone || 'professional';
+  const selectedLength = options.length || 'medium';
+  const lengthGuidance = selectedLength === 'short' ? 'Keep it to ~2 concise paragraphs.' : selectedLength === 'long' ? 'Write 5 or more detailed paragraphs.' : 'Keep it concise but impactful (3-4 paragraphs).';
+  const toneGuidance = `Use a ${selectedTone} tone.`;
   return `You are a professional cover letter writer. Generate a personalized, compelling cover letter based on the resume and job posting provided.
 
 Instructions:
 - Write a professional cover letter that highlights relevant experience and skills
-- Match the tone to the job posting (formal for corporate, slightly casual for startups, etc.)
+- ${toneGuidance}
 - Include specific examples from the resume that align with job requirements
 - Address key requirements mentioned in the job posting
-- Keep it concise but impactful (3-4 paragraphs)
+- ${lengthGuidance}
 - Include a strong opening and closing
 - DO NOT include placeholder text like [Your Name], [Company Name] - use actual information when available
 - Format as plain text, ready to be copied
