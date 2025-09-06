@@ -71,15 +71,16 @@ function calculateSemanticSimilarity(resumeData, jobPostingData) {
   }
 
   // Format & structure
-  const formatChecks = [
-    !!resumeData.full_name,
-    !!resumeData.email,
-    !!resumeData.current_title,
-    Array.isArray(resumeData.skills) && resumeData.skills.length >= 5,
-    !!resumeData.education,
-    resumeYears != null
+  const formatCheckDetails = [
+    { key: 'full_name', label: 'Add your full name', passed: !!resumeData.full_name },
+    { key: 'email', label: 'Add a professional email', passed: !!resumeData.email },
+    { key: 'current_title', label: 'Add your current title', passed: !!resumeData.current_title },
+    { key: 'skills', label: 'List at least 5 skills', passed: Array.isArray(resumeData.skills) && resumeData.skills.length >= 5 },
+    { key: 'education', label: 'Add your education section', passed: !!resumeData.education },
+    { key: 'years_of_experience', label: 'Specify years of experience', passed: resumeYears != null }
   ];
-  const formatScore = (formatChecks.filter(Boolean).length / formatChecks.length) * 100;
+  const passedFormatCount = formatCheckDetails.filter((c) => c.passed).length;
+  const formatScore = (passedFormatCount / formatCheckDetails.length) * 100;
 
   // Education match
   const requiredEduRank = educationRank(jobPostingData.education);
@@ -129,7 +130,10 @@ function calculateSemanticSimilarity(resumeData, jobPostingData) {
         target_years: targetYears
       },
       format_structure: {
-        percentage: Math.round(formatScore)
+        percentage: Math.round(formatScore),
+        total_checks: formatCheckDetails.length,
+        passed_checks: passedFormatCount,
+        failed_checks: formatCheckDetails.filter(c => !c.passed).map(c => c.label)
       },
       education_match: {
         percentage: Math.round(educationScore)

@@ -62,6 +62,12 @@ function renderATSScorecard(data, containerId) {
   const recommendationText = missingKeywords.length
     ? `Include ${missingKeywords.map(k => `"${k}"`).join(', ').replace(/, ([^,]*)$/, ', and $1')} in your experience section`
     : 'No high-impact keyword gaps detected.';
+  // Format recommendations
+  const formatMeta = sb.format_structure || {};
+  const failedChecks = Array.isArray(formatMeta.failed_checks) ? formatMeta.failed_checks : [];
+  // Format score weight in overall score (see atsScoring.js)
+  const FORMAT_WEIGHT = 0.10;
+  const perCheckPoints = formatMeta.total_checks ? Math.ceil((100 / formatMeta.total_checks) * FORMAT_WEIGHT) : 0;
 
   const scorecardHTML = `
     <div class="ats-scorecard">
@@ -100,7 +106,8 @@ function renderATSScorecard(data, containerId) {
         </div>
       </div>
 
-      <div class="card" style="margin-top:16px;">
+      <h3 style="margin-top:16px;">Improvement Recommendations</h3>
+      <div class="card" style="margin-top:8px;">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
           <div style="display:flex; align-items:center; gap:12px;">
             <span class="badge" style="background:#ffd6d6;color:#a33;padding:6px 10px;border-radius:9999px;font-weight:600;">HIGH</span>
@@ -111,6 +118,18 @@ function renderATSScorecard(data, containerId) {
         <div style="margin-top:8px;">${recommendationText}</div>
         ${missingKeywords.length ? `<div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:6px;">${missingKeywords.map(k => `<span class=\"ats-skill-tag ats-skill-missing\">${k}</span>`).join('')}</div>` : ''}
       </div>
+      ${failedChecks.map(chk => `
+        <div class=\"card\" style=\"margin-top:8px;\">
+          <div style=\"display:flex; align-items:center; justify-content:space-between; gap:12px;\">
+            <div style=\"display:flex; align-items:center; gap:12px;\">
+              <span class=\"badge\" style=\"background:#fff2cc;color:#8a6d00;padding:6px 10px;border-radius:9999px;font-weight:600;\">MEDIUM</span>
+              <div style=\"font-weight:700;\">${chk}</div>
+            </div>
+            <div style=\"color:#0a8a0a; font-weight:700; white-space:nowrap;\">+${perCheckPoints} points</div>
+          </div>
+          <div class=\"muted\" style=\"margin-top:6px;\">This will improve format & structure for ATS parsing.</div>
+        </div>
+      `).join('')}
     </div>
   `;
 
