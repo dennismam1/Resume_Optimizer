@@ -31,7 +31,9 @@ async function submitForm(e) {
 
 function fileChanged(input, labelId) {
   const label = document.getElementById(labelId);
-  const defaultText = labelId === 'file-label' ? 'Choose resume file...' : 'Choose job posting file...';
+  const defaultText = labelId === 'file-btn-label'
+    ? 'Drop your resume here'
+    : 'Upload job description';
   label.textContent = input.files && input.files[0] ? input.files[0].name : defaultText;
 }
 

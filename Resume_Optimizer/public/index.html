@@ -14,24 +14,28 @@
 
     <form id="upload-form" class="card" onsubmit="submitForm(event)" enctype="multipart/form-data">
       <div class="row">
-        <label for="file">Resume File</label>
-        <input id="file" name="file" type="file" accept=".pdf,.doc,.docx,image/*" onchange="fileChanged(this, 'file-label')" />
-        <div class="muted" id="file-label">Choose resume file...</div>
+        <label for="file">Resume File *</label>
+        <input id="file" name="file" type="file" class="hidden-file-input" accept=".pdf,.doc,.docx,image/*" onchange="fileChanged(this, 'file-btn-label')" />
+        <label class="upload-button" for="file">
+          <span id="file-btn-label">Drop your resume here</span>
+        </label>
       </div>
 
       <div class="row">
-        <label for="jobPost">Job Posting File</label>
-        <input id="jobPost" name="jobPost" type="file" accept=".pdf,.doc,.docx,image/*" onchange="fileChanged(this, 'jobpost-label')" />
-        <div class="muted" id="jobpost-label">Choose job posting file...</div>
+        <label for="jobPost">Job Posting File *</label>
+        <input id="jobPost" name="jobPost" type="file" class="hidden-file-input" accept=".pdf,.doc,.docx,.txt,image/*" onchange="fileChanged(this, 'jobpost-btn-label')" />
+        <label class="upload-button" for="jobPost">
+          <span id="jobpost-btn-label">Upload job description</span>
+        </label>
       </div>
 
       <div class="row">
-        <label for="message">Message</label>
-        <textarea id="message" name="message" rows="5" placeholder="Type anything..."></textarea>
+        <label for="message">Additional Requirements (Optional)</label>
+        <textarea id="message" name="message" rows="5" placeholder="Specify any particular skills, experience level, or requirements you’d like to emphasize in your application..."></textarea>
       </div>
 
       <div class="row">
-        <button id="submit-btn" type="submit">Submit</button>
+        <button id="submit-btn" type="submit">Analyze Resume</button>
         <div id="status" class="muted"></div>
       </div>
     </form>
