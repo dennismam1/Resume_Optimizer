@@ -34,6 +34,11 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 .success { color: #137333; }
 .error { color: #b00020; }
 
+/* Tabs */
+.tabs { display:flex; gap:8px; margin: 12px 0 16px; }
+.tab { background:#f5f5f5; color:#333; border:1px solid #ddd; padding:8px 12px; border-radius:9999px; cursor:pointer; }
+.tab.active { background:#0d6efd; color:#fff; border-color:#0d6efd; }
+
 /* User menu */
 .userbar { display:flex; justify-content:flex-end; margin-bottom: 8px; position: relative; }
 .user-menu-button { background:#f5f5f5; color:#333; border:1px solid #ddd; padding:8px 12px; border-radius:20px; cursor:pointer; }

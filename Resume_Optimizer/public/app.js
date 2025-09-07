@@ -190,7 +190,8 @@ function renderCoverLetter(data, containerId) {
     return;
   }
 
-  const submissionId = containerId.replace('analyze-output-', '');
+  const idTail = containerId.replace('analyze-output-', '');
+  const submissionId = idTail.split('-').pop();
 
   const coverLetterDiv = document.createElement('div');
   coverLetterDiv.innerHTML = `
@@ -347,24 +348,10 @@ async function exportCoverLetter(submissionId, format, button, tone, length) {
   }
 }
 
-async function loadRecent() {
-  const list = document.getElementById('recent');
-  list.innerHTML = '<div class="muted">Loading...</div>';
-  const res = await fetch('/api/submissions', {
-    headers: AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : undefined,
-  });
-  if (res.status === 401) {
-    AUTH_TOKEN = '';
-    AUTH_USER = null;
-    AUTH_VERIFIED = false;
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-    updateAuthUI();
-    return;
-  }
-  const json = await res.json();
+function renderSubmissions(items, containerId, scope) {
+  const list = document.getElementById(containerId);
   list.innerHTML = '';
-  (json.items || []).forEach(item => {
+  (items || []).forEach(item => {
     const div = document.createElement('div');
     div.className = 'item';
     const dt = new Date(item.createdAt).toLocaleString();
@@ -374,12 +361,12 @@ async function loadRecent() {
       ${item.jobPostOriginalName ? `<div><strong>Job Posting</strong>: <a href="/uploads/${item.jobPostStoredName}" target="_blank" rel="noopener">${item.jobPostOriginalName}</a> <span class="muted">(${item.jobPostMimeType || ''}, ${item.jobPostFileSize || 0} bytes)</span></div>` : ''}
       ${item.message ? `<div><strong>Message</strong>: ${item.message}</div>` : ''}
       <div style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
-        <button data-action="analyze" data-id="${item._id}" ${item.fileStoredName ? '' : 'disabled'}>Analyze Resume</button>
-        ${item.fileStoredName && item.jobPostStoredName ? `<button data-action="ats-score" data-id="${item._id}">Calculate ATS Score</button>` : ''}
-        <button data-action="cover-letter" data-id="${item._id}" ${item.fileStoredName && item.jobPostStoredName ? '' : 'disabled'}>📄 Generate Cover Letter</button>
-        <span class="muted" id="analyze-status-${item._id}"></span>
+        <button data-action="analyze" data-scope="${scope}" data-id="${item._id}" ${item.fileStoredName ? '' : 'disabled'}>Analyze Resume</button>
+        ${item.fileStoredName && item.jobPostStoredName ? `<button data-action="ats-score" data-scope="${scope}" data-id="${item._id}">Calculate ATS Score</button>` : ''}
+        <button data-action="cover-letter" data-scope="${scope}" data-id="${item._id}" ${item.fileStoredName && item.jobPostStoredName ? '' : 'disabled'}>📄 Generate Cover Letter</button>
+        <span class="muted" id="analyze-status-${scope}-${item._id}"></span>
       </div>
-      <div class="muted" id="analyze-output-${item._id}" style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px; display:none;"></div>
+      <div class="muted" id="analyze-output-${scope}-${item._id}" style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px; display:none;"></div>
     `;
     list.appendChild(div);
   });
@@ -390,8 +377,9 @@ async function loadRecent() {
   list.querySelectorAll('button[data-action="analyze"]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-id');
-      const statusEl = document.getElementById(`analyze-status-${id}`);
-      const outEl = document.getElementById(`analyze-output-${id}`);
+      const sc = btn.getAttribute('data-scope');
+      const statusEl = document.getElementById(`analyze-status-${sc}-${id}`);
+      const outEl = document.getElementById(`analyze-output-${sc}-${id}`);
       statusEl.textContent = 'Analyzing...';
       outEl.style.display = 'none';
       outEl.innerHTML = '';
@@ -417,8 +405,9 @@ async function loadRecent() {
   list.querySelectorAll('button[data-action="ats-score"]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-id');
-      const statusEl = document.getElementById(`analyze-status-${id}`);
-      const outEl = document.getElementById(`analyze-output-${id}`);
+      const sc = btn.getAttribute('data-scope');
+      const statusEl = document.getElementById(`analyze-status-${sc}-${id}`);
+      const outEl = document.getElementById(`analyze-output-${sc}-${id}`);
       statusEl.textContent = 'Calculating ATS Score...';
       outEl.style.display = 'none';
       outEl.innerHTML = '';
@@ -432,9 +421,9 @@ async function loadRecent() {
         if (!res.ok) throw new Error(json.error || 'Failed to calculate ATS score');
         statusEl.textContent = 'ATS Score Calculated';
         if (json.ats_result) {
-          renderATSScorecard(json, `analyze-output-${id}`);
+          renderATSScorecard(json, `analyze-output-${sc}-${id}`);
         } else {
-          outEl.innerHTML = `<pre style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px;">${JSON.stringify(json, null, 2)}</pre>`;
+          outEl.innerHTML = `<pre style=\"white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px;\">${JSON.stringify(json, null, 2)}</pre>`;
         }
         outEl.style.display = 'block';
       } catch (err) {
@@ -448,8 +437,9 @@ async function loadRecent() {
   list.querySelectorAll('button[data-action="cover-letter"]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-id');
-      const statusEl = document.getElementById(`analyze-status-${id}`);
-      const outEl = document.getElementById(`analyze-output-${id}`);
+      const sc = btn.getAttribute('data-scope');
+      const statusEl = document.getElementById(`analyze-status-${sc}-${id}`);
+      const outEl = document.getElementById(`analyze-output-${sc}-${id}`);
       statusEl.textContent = 'Generating Cover Letter...';
       outEl.style.display = 'none';
       outEl.innerHTML = '';
@@ -464,9 +454,9 @@ async function loadRecent() {
         if (!res.ok) throw new Error(json.error || 'Failed to generate cover letter');
         statusEl.textContent = 'Cover Letter Generated';
         if (json.cover_letter) {
-          renderCoverLetter(json, `analyze-output-${id}`);
+          renderCoverLetter(json, `analyze-output-${sc}-${id}`);
         } else {
-          outEl.innerHTML = `<pre style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px;">${JSON.stringify(json, null, 2)}</pre>`;
+          outEl.innerHTML = `<pre style=\"white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px;\">${JSON.stringify(json, null, 2)}</pre>`;
         }
         outEl.style.display = 'block';
       } catch (err) {
@@ -476,6 +466,30 @@ async function loadRecent() {
       }
     });
   });
+}
+
+async function loadRecent() {
+  const recentList = document.getElementById('recent');
+  const historyList = document.getElementById('history');
+  if (recentList) recentList.innerHTML = '<div class="muted">Loading...</div>';
+  if (historyList) historyList.innerHTML = '<div class="muted">Loading...</div>';
+  const res = await fetch('/api/submissions', {
+    headers: AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : undefined,
+  });
+  if (res.status === 401) {
+    AUTH_TOKEN = '';
+    AUTH_USER = null;
+    AUTH_VERIFIED = false;
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    updateAuthUI();
+    return;
+  }
+  const json = await res.json();
+  const items = json.items || [];
+  const latest = items[0] ? [items[0]] : [];
+  renderSubmissions(latest, 'recent', 'recent');
+  renderSubmissions(items, 'history', 'history');
 }
 
 // Initial load: verify stored token before showing app
@@ -496,6 +510,29 @@ window.addEventListener('DOMContentLoaded', async () => {
       localStorage.removeItem('auth_user');
       updateAuthUI();
     }
+  }
+
+  // Tabs setup
+  const tabSubmit = document.getElementById('tab-submit');
+  const tabHistory = document.getElementById('tab-history');
+  const submitSection = document.getElementById('submit-section');
+  const historySection = document.getElementById('history-section');
+  if (tabSubmit && tabHistory && submitSection && historySection) {
+    const activate = (which) => {
+      if (which === 'submit') {
+        tabSubmit.classList.add('active');
+        tabHistory.classList.remove('active');
+        submitSection.style.display = '';
+        historySection.style.display = 'none';
+      } else {
+        tabSubmit.classList.remove('active');
+        tabHistory.classList.add('active');
+        submitSection.style.display = 'none';
+        historySection.style.display = '';
+      }
+    };
+    tabSubmit.addEventListener('click', () => activate('submit'));
+    tabHistory.addEventListener('click', () => activate('history'));
   }
 });
 

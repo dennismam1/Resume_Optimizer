@@ -20,7 +20,7 @@ router.post('/auth/register', async (req, res) => {
     const salt = generateSalt();
     const passwordHash = hashPassword(password, salt);
 
-    const user = await User.create({ username: String(username), passwordHash, passwordSalt: salt });
+    const user =  await User.create({ username: String(username), passwordHash, passwordSalt: salt });
 
     return res.status(201).json({ ok: true, user: { id: String(user._id), username: user.username } });
   } catch (err) {
