@@ -8,16 +8,21 @@ const { configureMiddleware } = require('./middleware');
 const analysisRoutes = require('./routes/analysis');
 const coverLetterRoutes = require('./routes/coverLetter');
 const submissionsRoutes = require('./routes/submissions');
+const authRoutes = require('./routes/auth');
+const { authRequired } = require('./middleware/auth');
 
 const app = express();
 
 // Configure middleware
 configureMiddleware(app);
 
-// Routes
-app.use('/api', analysisRoutes);
-app.use('/api', coverLetterRoutes);
-app.use('/api', submissionsRoutes);
+// Public auth routes
+app.use('/api', authRoutes);
+
+// Protected routes
+app.use('/api', authRequired, analysisRoutes);
+app.use('/api', authRequired, coverLetterRoutes);
+app.use('/api', authRequired, submissionsRoutes);
 
 // Serve index.html on root
 app.get('/', (req, res) => {

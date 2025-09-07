@@ -9,10 +9,62 @@
 </head>
 <body>
   <div class="container">
-    <h1>Resume Optimizer - Submit</h1>
-    <p class="helper">Upload your resume and job posting files (PDF/Image/Word), and/or type a message. Submit at least one.</p>
+    <div class="card" id="auth-card" style="margin-bottom:16px;">
+      <div class="row" style="display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:220px;">
+          <label for="auth-username">Username</label>
+          <input id="auth-username" type="text" placeholder="Enter username" autocomplete="username" />
+        </div>
+        <div style="flex:1; min-width:220px;">
+          <label for="auth-password">Password</label>
+          <input id="auth-password" type="password" placeholder="Enter password" autocomplete="current-password" />
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button id="login-btn" type="button">Login</button>
+          <button id="register-btn" type="button" class="secondary">Register</button>
+          <button id="logout-btn" type="button" style="display:none;">Logout</button>
+        </div>
+      </div>
+      <div class="row" style="display:flex; align-items:center; justify-content:space-between;">
+        <div id="auth-status" class="muted"></div>
+        <div id="current-user" class="muted"></div>
+      </div>
+    </div>
 
-    <form id="upload-form" class="card" onsubmit="submitForm(event)" enctype="multipart/form-data">
+    <div id="app-content" style="display:none;">
+      <div id="userbar" class="userbar" style="display:none;">
+        <button id="user-menu-button" class="user-menu-button">
+          <span id="user-menu-username">User</span>
+          <span class="chevron">▾</span>
+        </button>
+        <div id="user-menu" class="user-menu" style="display:none;">
+          <button class="user-menu-item" data-action="account">
+            <span class="icon">👤</span>
+            <span>Account</span>
+          </button>
+          <button class="user-menu-item" data-action="premium">
+            <span class="icon">👑</span>
+            <span>Premium</span>
+          </button>
+          <button class="user-menu-item" data-action="logout">
+            <span class="icon">↪</span>
+            <span>Logout</span>
+          </button>
+          <button class="user-menu-item" data-action="shortcuts">
+            <span class="icon">⌨</span>
+            <span>Shortcuts</span>
+          </button>
+          <button class="user-menu-item danger" data-action="delete-account">
+            <span class="icon">🗑</span>
+            <span>Delete Account</span>
+          </button>
+        </div>
+      </div>
+
+      <h1>Resume Optimizer - Submit</h1>
+      <p class="helper">Upload your resume and job posting files (PDF/Image/Word), and/or type a message. Submit at least one.</p>
+
+      <form id="upload-form" class="card" onsubmit="submitForm(event)" enctype="multipart/form-data">
       <div class="row">
         <label for="file">Resume File *</label>
         <input id="file" name="file" type="file" class="hidden-file-input" accept=".pdf,.doc,.docx,image/*" onchange="fileChanged(this, 'file-btn-label')" />
@@ -38,9 +90,10 @@
         <button id="submit-btn" type="submit">Analyze Resume</button>
         <div id="status" class="muted"></div>
       </div>
-    </form>
+      </form>
 
-    <div class="list" id="recent"></div>
+      <div class="list" id="recent"></div>
+    </div>
   </div>
 </body>
 </html>

@@ -1,3 +1,47 @@
+let AUTH_TOKEN = localStorage.getItem('auth_token') || '';
+let AUTH_USER = JSON.parse(localStorage.getItem('auth_user') || 'null');
+let AUTH_VERIFIED = false;
+
+function updateAuthUI() {
+  const logoutBtn = document.getElementById('logout-btn');
+  const loginBtn = document.getElementById('login-btn');
+  const registerBtn = document.getElementById('register-btn');
+  const currentUser = document.getElementById('current-user');
+  const authCard = document.getElementById('auth-card');
+  const appContent = document.getElementById('app-content');
+  const userbar = document.getElementById('userbar');
+  const userMenuUsername = document.getElementById('user-menu-username');
+  if (AUTH_TOKEN && AUTH_USER && AUTH_VERIFIED) {
+    if (logoutBtn) logoutBtn.style.display = '';
+    if (loginBtn) loginBtn.style.display = 'none';
+    if (registerBtn) registerBtn.style.display = 'none';
+    if (currentUser) currentUser.textContent = `Signed in as: ${AUTH_USER.username}`;
+    if (authCard) authCard.style.display = 'none';
+    if (appContent) appContent.style.display = '';
+    if (userbar) userbar.style.display = '';
+    if (userMenuUsername) userMenuUsername.textContent = AUTH_USER.username;
+  } else {
+    if (logoutBtn) logoutBtn.style.display = 'none';
+    if (loginBtn) loginBtn.style.display = '';
+    if (registerBtn) registerBtn.style.display = '';
+    if (currentUser) currentUser.textContent = '';
+    if (authCard) authCard.style.display = '';
+    if (appContent) appContent.style.display = 'none';
+    if (userbar) userbar.style.display = 'none';
+  }
+}
+
+async function verifyAuth() {
+  try {
+    if (!AUTH_TOKEN || !AUTH_USER) return false;
+    const res = await fetch('/api/health', { headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` } });
+    if (res.ok) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 async function submitForm(e) {
   e.preventDefault();
   const form = document.getElementById('upload-form');
@@ -12,6 +56,7 @@ async function submitForm(e) {
     const res = await fetch('/api/submissions', {
       method: 'POST',
       body: data,
+      headers: AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : undefined,
     });
     const json = await res.json();
     if (!res.ok) {
@@ -217,7 +262,7 @@ function renderCoverLetter(data, containerId) {
     try {
       const res = await fetch('/api/generate-cover-letter', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: Object.assign({ 'Content-Type': 'application/json' }, AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : {}),
         body: JSON.stringify({ submissionId, tone, length })
       });
       const json = await res.json();
@@ -258,9 +303,7 @@ async function exportCoverLetter(submissionId, format, button, tone, length) {
   try {
     const response = await fetch(`/api/export-cover-letter/${format}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: Object.assign({ 'Content-Type': 'application/json' }, AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : {}),
       body: JSON.stringify({ submissionId: submissionId, tone, length })
     });
 
@@ -307,7 +350,18 @@ async function exportCoverLetter(submissionId, format, button, tone, length) {
 async function loadRecent() {
   const list = document.getElementById('recent');
   list.innerHTML = '<div class="muted">Loading...</div>';
-  const res = await fetch('/api/submissions');
+  const res = await fetch('/api/submissions', {
+    headers: AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : undefined,
+  });
+  if (res.status === 401) {
+    AUTH_TOKEN = '';
+    AUTH_USER = null;
+    AUTH_VERIFIED = false;
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    updateAuthUI();
+    return;
+  }
   const json = await res.json();
   list.innerHTML = '';
   (json.items || []).forEach(item => {
@@ -345,7 +399,7 @@ async function loadRecent() {
       try {
         const form = new FormData();
         form.append('submissionId', id);
-        const res = await fetch('/api/analyze', { method: 'POST', body: form });
+        const res = await fetch('/api/analyze', { method: 'POST', body: form, headers: AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : undefined });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || 'Failed to analyze');
         statusEl.textContent = json.structured ? 'Done' : 'Done (raw shown)';
@@ -373,7 +427,7 @@ async function loadRecent() {
         const form = new FormData();
         form.append('submissionId', id);
         form.append('calculateATS', 'true');
-        const res = await fetch('/api/analyze', { method: 'POST', body: form });
+        const res = await fetch('/api/analyze', { method: 'POST', body: form, headers: AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : undefined });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || 'Failed to calculate ATS score');
         statusEl.textContent = 'ATS Score Calculated';
@@ -403,9 +457,7 @@ async function loadRecent() {
       try {
         const res = await fetch('/api/generate-cover-letter', { 
           method: 'POST', 
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: Object.assign({ 'Content-Type': 'application/json' }, AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : {}),
           body: JSON.stringify({ submissionId: id })
         });
         const json = await res.json();
@@ -426,6 +478,136 @@ async function loadRecent() {
   });
 }
 
-window.addEventListener('DOMContentLoaded', loadRecent);
+// Initial load: verify stored token before showing app
+window.addEventListener('DOMContentLoaded', async () => {
+  AUTH_VERIFIED = false;
+  updateAuthUI();
+  if (AUTH_TOKEN && AUTH_USER) {
+    const ok = await verifyAuth();
+    if (ok) {
+      AUTH_VERIFIED = true;
+      updateAuthUI();
+      loadRecent();
+    } else {
+      AUTH_TOKEN = '';
+      AUTH_USER = null;
+      AUTH_VERIFIED = false;
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      updateAuthUI();
+    }
+  }
+});
 
+// Auth handlers
+window.addEventListener('DOMContentLoaded', () => {
+  updateAuthUI();
+  const status = document.getElementById('auth-status');
+  const usernameInput = document.getElementById('auth-username');
+  const passwordInput = document.getElementById('auth-password');
+  const loginBtn = document.getElementById('login-btn');
+  const registerBtn = document.getElementById('register-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+  const userMenuButton = document.getElementById('user-menu-button');
+  const userMenu = document.getElementById('user-menu');
+  if (userMenuButton && userMenu) {
+    userMenuButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      userMenu.style.display = userMenu.style.display === 'none' || userMenu.style.display === '' ? 'block' : 'none';
+    });
+    document.addEventListener('click', () => { userMenu.style.display = 'none'; });
+    userMenu.addEventListener('click', (e) => { e.stopPropagation(); });
+    userMenu.querySelectorAll('.user-menu-item').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const action = btn.getAttribute('data-action');
+        userMenu.style.display = 'none';
+        if (action === 'logout') {
+          try {
+            if (AUTH_TOKEN) {
+              await fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` } });
+            }
+          } catch {}
+          AUTH_TOKEN = '';
+          AUTH_USER = null;
+          AUTH_VERIFIED = false;
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_user');
+          updateAuthUI();
+        } else if (action === 'account') {
+          alert('Account page is not implemented yet.');
+        } else if (action === 'premium') {
+          alert('Premium page is not implemented yet.');
+        } else if (action === 'shortcuts') {
+          alert('Shortcuts: Use buttons on each submission item to analyze, score, or generate cover letter.');
+        } else if (action === 'delete-account') {
+          const confirmDelete = confirm('Are you sure you want to delete your account? This cannot be undone.');
+          if (confirmDelete) {
+            alert('Delete account flow not implemented.');
+          }
+        }
+      });
+    });
+  }
+
+  if (loginBtn) loginBtn.addEventListener('click', async () => {
+    status.textContent = '';
+    try {
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Login failed');
+      AUTH_TOKEN = json.token;
+      AUTH_USER = json.user;
+      AUTH_VERIFIED = true;
+      localStorage.setItem('auth_token', AUTH_TOKEN);
+      localStorage.setItem('auth_user', JSON.stringify(AUTH_USER));
+      status.textContent = 'Logged in';
+      status.className = 'success';
+      updateAuthUI();
+      await loadRecent();
+    } catch (err) {
+      status.textContent = err.message;
+      status.className = 'error';
+    }
+  });
+
+  if (registerBtn) registerBtn.addEventListener('click', async () => {
+    status.textContent = '';
+    try {
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Register failed');
+      status.textContent = 'Registered. You can log in now.';
+      status.className = 'success';
+    } catch (err) {
+      status.textContent = err.message;
+      status.className = 'error';
+    }
+  });
+
+  if (logoutBtn) logoutBtn.addEventListener('click', async () => {
+    try {
+      if (AUTH_TOKEN) {
+        await fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` } });
+      }
+    } catch {}
+    AUTH_TOKEN = '';
+    AUTH_USER = null;
+    AUTH_VERIFIED = false;
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    updateAuthUI();
+  });
+});
 
