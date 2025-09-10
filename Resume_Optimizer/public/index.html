@@ -107,6 +107,193 @@
         <div class="list" id="history"></div>
       </div>
     </div>
+
+    <!-- Account Page (Design-only) -->
+    <div id="account-section" style="display:none;">
+      <div class="account-header">
+        <div>
+          <h1>Welcome back, <span id="account-username">User</span>!</h1>
+          <div class="muted">Here's your resume optimization progress and recent activity</div>
+        </div>
+        <button id="account-back" type="button" class="secondary">← Back</button>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon">📄</div>
+          <div class="kpi-content">
+            <div class="kpi-value">24</div>
+            <div class="kpi-label">Resumes Analyzed</div>
+            <div class="kpi-sub">+2 this week</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon success">✅</div>
+          <div class="kpi-content">
+            <div class="kpi-value">87%</div>
+            <div class="kpi-label">Average ATS Score</div>
+            <div class="kpi-sub">+5% improvement</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">✉️</div>
+          <div class="kpi-content">
+            <div class="kpi-value">12</div>
+            <div class="kpi-label">Cover Letters Generated</div>
+            <div class="kpi-sub">4 this week</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon warn">📌</div>
+          <div class="kpi-content">
+            <div class="kpi-value">6</div>
+            <div class="kpi-label">Job Applications</div>
+            <div class="kpi-sub">2 interviews scheduled</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="account-grid">
+        <div class="account-main">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Quick Actions</div>
+              <div class="panel-actions">
+                <button type="button">Analyze New Resume</button>
+                <button type="button" class="secondary">Generate Cover Letter</button>
+                <button type="button" class="ghost">View History</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">ATS Score Progress</div>
+              <a class="panel-link" href="#">View Details</a>
+            </div>
+            <div class="chart-box">
+              <!-- Simple static line chart (design only) -->
+              <svg viewBox="0 0 600 220" class="chart-svg" aria-hidden="true">
+                <defs>
+                  <linearGradient id="areaFill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="#7aa6ff" stop-opacity="0.6" />
+                    <stop offset="100%" stop-color="#7aa6ff" stop-opacity="0.05" />
+                  </linearGradient>
+                </defs>
+                <path d="M20,160 L80,140 L140,145 L200,120 L260,110 L320,95 L380,85 L440,88 L500,86" fill="none" stroke="#4177ff" stroke-width="3" />
+                <path d="M20,200 L20,160 L80,140 L140,145 L200,120 L260,110 L320,95 L380,85 L440,88 L500,86 L500,200 Z" fill="url(#areaFill)" />
+                <g fill="#4177ff">
+                  <circle cx="20" cy="160" r="4" />
+                  <circle cx="80" cy="140" r="4" />
+                  <circle cx="140" cy="145" r="4" />
+                  <circle cx="200" cy="120" r="4" />
+                  <circle cx="260" cy="110" r="4" />
+                  <circle cx="320" cy="95" r="4" />
+                  <circle cx="380" cy="85" r="4" />
+                  <circle cx="440" cy="88" r="4" />
+                  <circle cx="500" cy="86" r="4" />
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="account-side">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Recent Activity</div>
+              <a class="panel-link" href="#">View All</a>
+            </div>
+            <div class="activity-list">
+              <div class="activity-item">
+                <div class="activity-dot blue"></div>
+                <div>
+                  <div class="activity-title">Resume Analysis Complete</div>
+                  <div class="activity-sub muted">Software Engineer position at TechCorp · 2 hours ago</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot green"></div>
+                <div>
+                  <div class="activity-title">Cover Letter Generated</div>
+                  <div class="activity-sub muted">Account Manager for Product Manager role · 1 day ago</div>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-dot yellow"></div>
+                <div>
+                  <div class="activity-title">Draft Saved</div>
+                  <div class="activity-sub muted">Marketing Specialist application · 3 days ago</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Saved Drafts</div>
+              <a class="panel-link" href="#">Manage All</a>
+            </div>
+            <div class="drafts-list">
+              <div class="draft-card">
+                <div class="draft-title">Frontend Developer - ByteBrite</div>
+                <div class="draft-meta muted">Created 2 days ago · ATS 82%</div>
+                <div class="draft-actions">
+                  <button type="button" class="ghost">Edit</button>
+                  <button type="button">Complete</button>
+                </div>
+              </div>
+              <div class="draft-card">
+                <div class="draft-title">Data Analyst - BigTech Corp</div>
+                <div class="draft-meta muted">Created last week · Needs cover letter</div>
+                <div class="draft-actions">
+                  <button type="button" class="ghost">Edit</button>
+                  <button type="button">Complete</button>
+                </div>
+              </div>
+              <div class="draft-card">
+                <div class="draft-title">UX Designer - Creative Agency</div>
+                <div class="draft-meta muted">Draft by Suzanne</div>
+                <div class="draft-actions">
+                  <button type="button" class="ghost">Edit</button>
+                  <button type="button" class="success">Submit</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subscription-panel">
+        <div class="panel">
+          <div class="subscription-grid">
+            <div>
+              <div class="panel-title">Your Subscription</div>
+              <div class="usage-grid">
+                <div class="usage-row">
+                  <div class="usage-label">Resume Analyses</div>
+                  <div class="usage-bar"><div style="width: 85%"></div></div>
+                  <div class="usage-value">850</div>
+                </div>
+                <div class="usage-row">
+                  <div class="usage-label">Cover Letters</div>
+                  <div class="usage-bar"><div style="width: 42%"></div></div>
+                  <div class="usage-value">426</div>
+                </div>
+              </div>
+            </div>
+            <div class="billing">
+              <div class="billing-next muted">Next billing</div>
+              <div class="billing-date">October 15, 2025 · $19.99</div>
+              <div class="billing-actions">
+                <button type="button" class="ghost">Manage Billing</button>
+                <button type="button" class="secondary">Upgrade</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </body>
 </html>

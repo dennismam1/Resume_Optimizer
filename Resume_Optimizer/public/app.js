@@ -11,6 +11,7 @@ function updateAuthUI() {
   const appContent = document.getElementById('app-content');
   const userbar = document.getElementById('userbar');
   const userMenuUsername = document.getElementById('user-menu-username');
+  const accountSection = document.getElementById('account-section');
   if (AUTH_TOKEN && AUTH_USER && AUTH_VERIFIED) {
     if (logoutBtn) logoutBtn.style.display = '';
     if (loginBtn) loginBtn.style.display = 'none';
@@ -20,6 +21,7 @@ function updateAuthUI() {
     if (appContent) appContent.style.display = '';
     if (userbar) userbar.style.display = '';
     if (userMenuUsername) userMenuUsername.textContent = AUTH_USER.username;
+    if (accountSection) accountSection.style.display = 'none';
   } else {
     if (logoutBtn) logoutBtn.style.display = 'none';
     if (loginBtn) loginBtn.style.display = '';
@@ -28,6 +30,7 @@ function updateAuthUI() {
     if (authCard) authCard.style.display = '';
     if (appContent) appContent.style.display = 'none';
     if (userbar) userbar.style.display = 'none';
+    if (accountSection) accountSection.style.display = 'none';
   }
 }
 
@@ -540,6 +543,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 window.addEventListener('DOMContentLoaded', () => {
   updateAuthUI();
   const status = document.getElementById('auth-status');
+  const accountBackBtn = document.getElementById('account-back');
+  if (accountBackBtn) {
+    accountBackBtn.addEventListener('click', () => {
+      const appContent = document.getElementById('app-content');
+      const accountSection = document.getElementById('account-section');
+      if (accountSection) accountSection.style.display = 'none';
+      if (appContent) appContent.style.display = '';
+    });
+  }
   const usernameInput = document.getElementById('auth-username');
   const passwordInput = document.getElementById('auth-password');
   const loginBtn = document.getElementById('login-btn');
@@ -571,7 +583,12 @@ window.addEventListener('DOMContentLoaded', () => {
           localStorage.removeItem('auth_user');
           updateAuthUI();
         } else if (action === 'account') {
-          alert('Account page is not implemented yet.');
+          const appContent = document.getElementById('app-content');
+          const accountSection = document.getElementById('account-section');
+          const accountUsername = document.getElementById('account-username');
+          if (accountUsername && AUTH_USER) accountUsername.textContent = AUTH_USER.username;
+          if (appContent) appContent.style.display = 'none';
+          if (accountSection) accountSection.style.display = '';
         } else if (action === 'premium') {
           alert('Premium page is not implemented yet.');
         } else if (action === 'shortcuts') {

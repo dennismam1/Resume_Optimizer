@@ -314,3 +314,85 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
   cursor: not-allowed;
 }
 
+/* Account Dashboard */
+.account-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin: 8px 0 16px;
+}
+
+.kpi-grid {
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap:12px;
+  margin-bottom:16px;
+}
+.kpi-card {
+  display:flex;
+  gap:12px;
+  align-items:center;
+  border:1px solid #e2e2e2;
+  border-radius:10px;
+  padding:14px;
+  background:#fff;
+}
+.kpi-icon { width:36px; height:36px; display:flex; align-items:center; justify-content:center; background:#f4f6ff; border-radius:10px; }
+.kpi-icon.success { background:#e7fff6; }
+.kpi-icon.warn { background:#fff6e0; }
+.kpi-content { display:grid; gap:2px; }
+.kpi-value { font-size:20px; font-weight:800; }
+.kpi-label { font-size:12px; color:#555; }
+.kpi-sub { font-size:11px; color:#888; }
+
+.account-grid { display:grid; grid-template-columns: 2fr 1fr; gap:12px; }
+.account-main, .account-side { display:grid; gap:12px; }
+
+.panel { border:1px solid #e2e2e2; border-radius:10px; padding:14px; background:#fff; }
+.panel-header { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+.panel-title { font-weight:700; }
+.panel-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.panel-link { color:#0d6efd; text-decoration:none; font-size:12px; }
+
+.chart-box { background:#f8f9ff; border:1px dashed #d8defa; border-radius:10px; padding:8px; }
+.chart-svg { width:100%; height:180px; display:block; }
+
+.activity-list { display:grid; gap:10px; }
+.activity-item { display:flex; gap:10px; align-items:flex-start; }
+.activity-dot { width:10px; height:10px; border-radius:9999px; margin-top:6px; }
+.activity-dot.blue { background:#3c83f6; }
+.activity-dot.green { background:#00b894; }
+.activity-dot.yellow { background:#f4b400; }
+.activity-title { font-weight:600; }
+
+.drafts-list { display:grid; gap:10px; }
+.draft-card { border:1px solid #ededed; border-radius:8px; padding:12px; background:#fff; }
+.draft-title { font-weight:700; margin-bottom:2px; }
+.draft-meta { margin-bottom:8px; }
+.draft-actions { display:flex; gap:8px; flex-wrap:wrap; }
+
+.subscription-panel { margin-top:12px; }
+.subscription-grid { display:grid; grid-template-columns: 2fr 1fr; gap:12px; align-items:center; }
+.usage-grid { margin-top:8px; display:grid; gap:8px; }
+.usage-row { display:grid; grid-template-columns: 1fr 1fr 60px; gap:10px; align-items:center; }
+.usage-label { color:#555; }
+.usage-bar { background:#eef2ff; border-radius:9999px; height:10px; overflow:hidden; }
+.usage-bar > div { background:#5b7cfa; height:100%; border-radius:9999px; }
+.usage-value { text-align:right; font-weight:700; }
+.billing-next { font-size:12px; }
+.billing-date { font-weight:700; margin:4px 0; }
+.billing-actions { display:flex; gap:8px; }
+
+/* Button variants used on account page */
+button.secondary { background:#f1f3f5; color:#333; border:1px solid #dfe3e6; }
+button.secondary:hover { background:#e9ecef; }
+button.ghost { background:#fff; color:#0d6efd; border:1px solid #cfe2ff; }
+button.ghost:hover { background:#f5f9ff; }
+button.success { background:#00b894; }
+
+@media (max-width: 900px) {
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .account-grid { grid-template-columns: 1fr; }
+  .subscription-grid { grid-template-columns: 1fr; }
+}
+
