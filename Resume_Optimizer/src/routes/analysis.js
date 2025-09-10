@@ -113,6 +113,21 @@ router.post('/analyze', upload.single('file'), async (req, res) => {
         // Calculate ATS score
         const atsResult = calculateSemanticSimilarity(resumeData, jobPostingData);
 
+        // Persist to ATS history for the submission
+        try {
+          await Submission.findByIdAndUpdate(String(submissionId), {
+            $push: {
+              atsHistory: {
+                score: atsResult.ats_score,
+                result: atsResult,
+                createdAt: new Date()
+              }
+            }
+          });
+        } catch (persistErr) {
+          console.error('Failed to persist ATS history:', persistErr);
+        }
+
         return res.json({
           ok: true,
           model: config.NEBIUS_MODEL_ID,

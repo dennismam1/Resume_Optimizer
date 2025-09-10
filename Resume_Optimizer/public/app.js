@@ -589,6 +589,8 @@ window.addEventListener('DOMContentLoaded', () => {
           if (accountUsername && AUTH_USER) accountUsername.textContent = AUTH_USER.username;
           if (appContent) appContent.style.display = 'none';
           if (accountSection) accountSection.style.display = '';
+          // Load ATS progress chart when opening account
+          renderATSProgressChart();
         } else if (action === 'premium') {
           alert('Premium page is not implemented yet.');
         } else if (action === 'shortcuts') {
@@ -664,4 +666,136 @@ window.addEventListener('DOMContentLoaded', () => {
     updateAuthUI();
   });
 });
+// Fetch ATS history and render simple line chart on canvas
+async function renderATSProgressChart() {
+  try {
+    const canvas = document.getElementById('ats-progress-canvas');
+    const empty = document.getElementById('ats-progress-empty');
+    if (!canvas || !canvas.getContext) return;
+    const ctx = canvas.getContext('2d');
+
+    // Fetch
+    const res = await fetch('/api/ats/history', {
+      headers: AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : undefined,
+    });
+    if (!res.ok) throw new Error('Failed to load ATS history');
+    const json = await res.json();
+    const items = (json.items || []).map(p => ({ date: new Date(p.date), score: Number(p.score) }))
+      .filter(p => isFinite(p.score) && !isNaN(p.date.getTime()));
+
+    // Handle empty
+    if (!items.length) {
+      if (empty) empty.style.display = '';
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    } else {
+      if (empty) empty.style.display = 'none';
+    }
+
+    // Dimensions and padding
+    const width = canvas.width;
+    const height = canvas.height;
+    const pad = { left: 36, right: 10, top: 10, bottom: 24 };
+    const plotW = width - pad.left - pad.right;
+    const plotH = height - pad.top - pad.bottom;
+
+    // Scales
+    const minDate = items[0].date;
+    const maxDate = items[items.length - 1].date;
+    const xScale = (d) => {
+      const t = (d - minDate) / (maxDate - minDate || 1);
+      return pad.left + t * plotW;
+    };
+    const yScale = (s) => {
+      const t = (s - 0) / 100; // scores 0..100
+      return pad.top + (1 - t) * plotH;
+    };
+
+    // Clear
+    ctx.clearRect(0, 0, width, height);
+
+    // Gridlines (y at 0,25,50,75,100)
+    ctx.strokeStyle = '#e5e9ff';
+    ctx.lineWidth = 1;
+    [0,25,50,75,100].forEach(v => {
+      const y = yScale(v);
+      ctx.beginPath();
+      ctx.moveTo(pad.left, y);
+      ctx.lineTo(width - pad.right, y);
+      ctx.stroke();
+      ctx.fillStyle = '#8792b0';
+      ctx.font = '12px system-ui, Arial';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(v), pad.left - 6, y);
+    });
+
+    // X-axis ticks: 4 evenly spaced dates
+    const tickCount = Math.min(4, items.length);
+    for (let i = 0; i < tickCount; i++) {
+      const idx = Math.round((i / (tickCount - 1 || 1)) * (items.length - 1));
+      const d = items[idx].date;
+      const x = xScale(d);
+      ctx.strokeStyle = '#eef1ff';
+      ctx.beginPath();
+      ctx.moveTo(x, pad.top);
+      ctx.lineTo(x, height - pad.bottom);
+      ctx.stroke();
+      ctx.fillStyle = '#8792b0';
+      ctx.font = '12px system-ui, Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const label = d.toLocaleDateString();
+      ctx.fillText(label, x, height - pad.bottom + 4);
+    }
+
+    // Area under the line
+    const gradient = ctx.createLinearGradient(0, pad.top, 0, height - pad.bottom);
+    gradient.addColorStop(0, 'rgba(122,166,255,0.6)');
+    gradient.addColorStop(1, 'rgba(122,166,255,0.05)');
+
+    ctx.beginPath();
+    items.forEach((p, i) => {
+      const x = xScale(p.date);
+      const y = yScale(p.score);
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    ctx.lineTo(xScale(items[items.length - 1].date), height - pad.bottom);
+    ctx.lineTo(xScale(items[0].date), height - pad.bottom);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    items.forEach((p, i) => {
+      const x = xScale(p.date);
+      const y = yScale(p.score);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = '#4177ff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Points
+    ctx.fillStyle = '#4177ff';
+    items.forEach(p => {
+      const x = xScale(p.date);
+      const y = yScale(p.score);
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+  } catch (err) {
+    console.error('ATS chart error:', err);
+  }
+}
+
 

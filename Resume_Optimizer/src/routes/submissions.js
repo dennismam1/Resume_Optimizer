@@ -5,6 +5,33 @@ const { upload } = require('../middleware');
 
 const router = express.Router();
 
+// ATS History endpoint: returns chronological (ascending) series of {date, score}
+router.get('/ats/history', async (req, res) => {
+  try {
+    // Fetch latest 100 submissions with any atsHistory entries
+    const submissions = await Submission.find({ 'atsHistory.0': { $exists: true } })
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
+
+    // Flatten and sort all history points by their createdAt
+    const points = [];
+    for (const sub of submissions) {
+      for (const h of (sub.atsHistory || [])) {
+        if (h && typeof h.score === 'number' && h.createdAt) {
+          points.push({ date: new Date(h.createdAt), score: h.score });
+        }
+      }
+    }
+    points.sort((a, b) => a.date - b.date);
+
+    res.json({ items: points });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch ATS history' });
+  }
+});
+
 // Create submission with both resume and job posting files
 router.post('/submissions', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'jobPost', maxCount: 1 }]), async (req, res) => {
   try {

@@ -52,6 +52,18 @@ const SubmissionSchema = new mongoose.Schema(
       trim: true,
       maxlength: 5000,
     },
+
+    // ATS scoring history (each calculation appended here)
+    atsHistory: [
+      new mongoose.Schema(
+        {
+          score: { type: Number, min: 0, max: 100 },
+          result: { type: mongoose.Schema.Types.Mixed },
+          createdAt: { type: Date, default: Date.now },
+        },
+        { _id: false }
+      )
+    ],
   },
   { timestamps: true }
 );
