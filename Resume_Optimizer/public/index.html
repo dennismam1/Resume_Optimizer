@@ -156,18 +156,31 @@
       <div class="account-grid">
         <div class="account-main">
           <div class="panel">
-            <div class="panel-header">
+            <div class="panel-header has-divider">
               <div class="panel-title">Quick Actions</div>
-              <div class="panel-actions">
-                <button type="button">Analyze New Resume</button>
-                <button type="button" class="secondary">Generate Cover Letter</button>
-                <button type="button" class="ghost">View History</button>
-              </div>
+            </div>
+            <div class="qa-actions">
+              <button id="qa-btn-analyze" type="button" class="qa-btn qa-btn-primary">
+                <span class="qa-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm0 2.5L19.5 10H14V4.5z"/>
+                  </svg>
+                </span>
+                <span>Analyze New Resume</span>
+              </button>
+              <button id="qa-btn-history" type="button" class="qa-btn qa-btn-secondary">
+                <span class="qa-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 .001 6.001A3 3 0 0 0 12 9z"/>
+                  </svg>
+                </span>
+                <span>View History</span>
+              </button>
             </div>
           </div>
 
           <div class="panel">
-            <div class="panel-header">
+            <div class="panel-header compact">
               <div class="panel-title">ATS Score Progress</div>
               <a class="panel-link" href="#">View Details</a>
             </div>

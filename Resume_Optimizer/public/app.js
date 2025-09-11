@@ -68,7 +68,7 @@ async function submitForm(e) {
     status.textContent = 'Saved!';
     status.className = 'success';
     form.reset();
-    await loadRecent();
+    await Promise.all([loadRecent(), updateStats()]);
   } catch (err) {
     status.textContent = err.message;
     status.className = 'error';
@@ -471,6 +471,24 @@ function renderSubmissions(items, containerId, scope) {
   });
 }
 
+async function updateStats() {
+  try {
+    const res = await fetch('/api/submissions/stats', {
+      headers: AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : undefined,
+    });
+    if (!res.ok) throw new Error('Failed to fetch stats');
+    const stats = await res.json();
+    
+    // Update KPI values
+    const totalEl = document.querySelector('.kpi-value');
+    const weeklyEl = document.querySelector('.kpi-sub');
+    if (totalEl) totalEl.textContent = stats.total;
+    if (weeklyEl) weeklyEl.textContent = `+${stats.weekly} this week`;
+  } catch (err) {
+    console.error('Failed to update stats:', err);
+  }
+}
+
 async function loadRecent() {
   const recentList = document.getElementById('recent');
   const historyList = document.getElementById('history');
@@ -499,12 +517,13 @@ async function loadRecent() {
 window.addEventListener('DOMContentLoaded', async () => {
   AUTH_VERIFIED = false;
   updateAuthUI();
+  updateStats(); // Load initial stats
   if (AUTH_TOKEN && AUTH_USER) {
     const ok = await verifyAuth();
     if (ok) {
       AUTH_VERIFIED = true;
       updateAuthUI();
-      loadRecent();
+      await Promise.all([loadRecent(), updateStats()]);
     } else {
       AUTH_TOKEN = '';
       AUTH_USER = null;
@@ -797,5 +816,48 @@ async function renderATSProgressChart() {
     console.error('ATS chart error:', err);
   }
 }
+
+window.addEventListener('DOMContentLoaded', () => {
+  const qaAnalyze = document.getElementById('qa-btn-analyze');
+  const qaHistory = document.getElementById('qa-btn-history');
+  const tabSubmit = document.getElementById('tab-submit');
+  const tabHistory = document.getElementById('tab-history');
+  const submitSection = document.getElementById('submit-section');
+  const historySection = document.getElementById('history-section');
+  const appContent = document.getElementById('app-content');
+  const accountSection = document.getElementById('account-section');
+
+  const activateTab = (which) => {
+    if (!tabSubmit || !tabHistory || !submitSection || !historySection) return;
+    if (which === 'submit') {
+      tabSubmit.classList.add('active');
+      tabHistory.classList.remove('active');
+      submitSection.style.display = '';
+      historySection.style.display = 'none';
+    } else {
+      tabSubmit.classList.remove('active');
+      tabHistory.classList.add('active');
+      submitSection.style.display = 'none';
+      historySection.style.display = '';
+    }
+  };
+
+  if (qaAnalyze) {
+    qaAnalyze.addEventListener('click', () => {
+      if (accountSection) accountSection.style.display = 'none';
+      if (appContent) appContent.style.display = '';
+      activateTab('submit');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+  if (qaHistory) {
+    qaHistory.addEventListener('click', () => {
+      if (accountSection) accountSection.style.display = 'none';
+      if (appContent) appContent.style.display = '';
+      activateTab('history');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+});
 
 

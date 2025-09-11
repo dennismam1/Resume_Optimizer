@@ -83,6 +83,30 @@ router.get('/submissions', async (req, res) => {
   }
 });
 
+// Get submission statistics
+router.get('/submissions/stats', async (req, res) => {
+  try {
+    // Get total count
+    const totalCount = await Submission.countDocuments();
+    
+    // Get count for this week
+    const startOfWeek = new Date();
+    startOfWeek.setHours(0, 0, 0, 0);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+    const weeklyCount = await Submission.countDocuments({
+      createdAt: { $gte: startOfWeek }
+    });
+
+    res.json({
+      total: totalCount,
+      weekly: weeklyCount
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to get submission stats' });
+  }
+});
+
 // Get single submission
 router.get('/submissions/:id', async (req, res) => {
   try {
