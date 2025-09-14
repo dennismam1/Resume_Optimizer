@@ -53,6 +53,23 @@ const SubmissionSchema = new mongoose.Schema(
       maxlength: 5000,
     },
 
+    // Manual application tracking fields
+    applicationStatus: {
+      type: String,
+      enum: ['Pending', 'Under Review', 'Interview Scheduled', 'Rejected', 'Offer Received'],
+      default: 'Pending'
+    },
+    interviewDate: {
+      type: Date,
+      default: null
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+      default: ''
+    },
+
     // ATS scoring history (each calculation appended here)
     atsHistory: [
       new mongoose.Schema(

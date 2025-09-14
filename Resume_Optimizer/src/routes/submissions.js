@@ -76,7 +76,32 @@ router.post('/submissions', upload.fields([{ name: 'file', maxCount: 1 }, { name
 router.get('/submissions', async (req, res) => {
   try {
     const items = await Submission.find().sort({ createdAt: -1 }).limit(50).lean();
-    res.json({ items });
+    
+    // Enrich submissions with job info and latest ATS scores
+    const enrichedItems = items.map(item => {
+      const jobTitle = item.jobPostingData?.job_title || 'Position Not Specified';
+      const companyName = item.jobPostingData?.company_name || 'Company Not Specified';
+      const latestATS = item.atsHistory && item.atsHistory.length > 0 
+        ? item.atsHistory[item.atsHistory.length - 1] 
+        : null;
+      
+      // Use manual interview date if set, otherwise null
+      const interviewDate = item.interviewDate || null;
+      
+      return {
+        ...item,
+        jobTitle,
+        companyName,
+        latestATSScore: latestATS?.score || null,
+        lastAnalyzed: latestATS?.createdAt || item.createdAt,
+        interviewDate,
+        // Use manual status if set, otherwise derive from ATS score
+        manualStatus: item.applicationStatus || null,
+        notes: item.notes || ''
+      };
+    });
+    
+    res.json({ items: enrichedItems });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to list submissions' });
@@ -141,9 +166,15 @@ router.get('/submissions/stats', async (req, res) => {
       improvement = weeklyAvg - previousWeekAvg;
     }
 
+    // Count interviews scheduled
+    const interviewsScheduled = await Submission.countDocuments({
+      applicationStatus: 'Interview Scheduled'
+    });
+
     res.json({
       total: totalCount,
       weekly: weeklyCount,
+      interviews: interviewsScheduled,
       ats: {
         average: overallAvg,
         weeklyAverage: weeklyAvg,
@@ -167,6 +198,59 @@ router.get('/submissions/:id', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to get submission' });
+  }
+});
+
+// Update submission details
+router.put('/submissions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { companyName, jobTitle, applicationStatus, interviewDate, notes } = req.body;
+    
+    const updateData = {};
+    
+    // Update job posting data if company name or job title changed
+    if (companyName || jobTitle) {
+      const item = await Submission.findById(id);
+      if (!item) return res.status(404).json({ error: 'Not found' });
+      
+      const currentJobData = item.jobPostingData || {};
+      updateData.jobPostingData = {
+        ...currentJobData,
+        ...(companyName && { company_name: companyName }),
+        ...(jobTitle && { job_title: jobTitle })
+      };
+    }
+    
+    // Update application tracking fields
+    if (applicationStatus) updateData.applicationStatus = applicationStatus;
+    if (interviewDate) updateData.interviewDate = new Date(interviewDate);
+    if (notes !== undefined) updateData.notes = notes;
+    
+    const updatedItem = await Submission.findByIdAndUpdate(
+      id, 
+      updateData, 
+      { new: true, runValidators: true }
+    );
+    
+    if (!updatedItem) return res.status(404).json({ error: 'Not found' });
+    res.json({ message: 'Application updated successfully', submission: updatedItem });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update submission' });
+  }
+});
+
+// Delete submission
+router.delete('/submissions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const item = await Submission.findByIdAndDelete(id);
+    if (!item) return res.status(404).json({ error: 'Not found' });
+    res.json({ message: 'Submission deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete submission' });
   }
 });
 

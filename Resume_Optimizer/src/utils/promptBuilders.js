@@ -29,10 +29,12 @@ function buildJobPostingKeywordPrompt(jobPostingText) {
 
 Requirements:
 - Output ONLY valid JSON.
-- Extract keywords in these categories: "required_skills", "preferred_skills", "technologies", "experience_level", "education", "certifications", "soft_skills"
+- Extract keywords in these categories: "job_title", "company_name", "required_skills", "preferred_skills", "technologies", "experience_level", "education", "certifications", "soft_skills"
 - Use arrays for skills and technologies
-- Use strings for experience_level and education
+- Use strings for job_title, company_name, experience_level and education
 - Keep values concise and standardized
+- For job_title, extract the main position title (e.g., "Senior Frontend Developer", "React Developer")
+- For company_name, extract the hiring company name
 
 Job Posting:
 """

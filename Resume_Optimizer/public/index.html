@@ -102,8 +102,8 @@
       </div>
 
       <div id="history-section" style="display:none;">
-        <h1>Submission History</h1>
-        <p class="helper">All your previous submissions are listed below.</p>
+        <h1>Job Application History</h1>
+        <p class="helper">Track your job applications, ATS scores, and interview schedules.</p>
         <div class="list" id="history"></div>
       </div>
     </div>
@@ -138,7 +138,7 @@
         <div class="kpi-card">
           <div class="kpi-icon warn">📌</div>
           <div class="kpi-content">
-            <div class="kpi-value">6</div>
+            <!-- <div class="kpi-value">6</div> -->
             <div class="kpi-label">Job Applications</div>
             <div class="kpi-sub">2 interviews scheduled</div>
           </div>
@@ -214,21 +214,21 @@
             </div>
           </div>
 
-          <div class="panel">
+          <!-- <div class="panel">
             <div class="panel-header">
               <div class="panel-title">Saved Drafts</div>
               <a class="panel-link" href="#">Manage All</a>
             </div>
-            <div class="drafts-list">
-              <div class="draft-card">
+            <div class="drafts-list"> -->
+              <!-- <div class="draft-card">
                 <div class="draft-title">Frontend Developer - ByteBrite</div>
                 <div class="draft-meta muted">Created 2 days ago · ATS 82%</div>
                 <div class="draft-actions">
                   <button type="button" class="ghost">Edit</button>
                   <button type="button">Complete</button>
                 </div>
-              </div>
-              <div class="draft-card">
+              </div> -->
+              <!-- <div class="draft-card">
                 <div class="draft-title">Data Analyst - BigTech Corp</div>
                 <div class="draft-meta muted">Created last week · Needs cover letter</div>
                 <div class="draft-actions">
@@ -244,10 +244,10 @@
                   <button type="button" class="success">Submit</button>
                 </div>
               </div>
-            </div>
-          </div>
+            </div> -->
+          <!-- </div>
         </div>
-      </div>
+      </div> -->
 
       <!-- <div class="subscription-panel">
         <div class="panel">
@@ -277,6 +277,53 @@
             </div> -->
           <!-- </div>
         </div> -->
+      </div>
+    </div>
+
+    <!-- Edit Application Modal -->
+    <div id="edit-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Edit Application</h2>
+          <button class="modal-close" id="edit-modal-close">&times;</button>
+        </div>
+        <form id="edit-application-form">
+          <div class="form-row">
+            <label for="edit-company-name">Company Name *</label>
+            <input type="text" id="edit-company-name" name="companyName" required />
+          </div>
+          
+          <div class="form-row">
+            <label for="edit-position">Position *</label>
+            <input type="text" id="edit-position" name="jobTitle" required />
+          </div>
+          
+          <div class="form-row">
+            <label for="edit-status">Status</label>
+            <select id="edit-status" name="applicationStatus">
+              <option value="Pending">Pending</option>
+              <option value="Under Review">Under Review</option>
+              <option value="Interview Scheduled">Interview Scheduled</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Offer Received">Offer Received</option>
+            </select>
+          </div>
+          
+          <div class="form-row">
+            <label for="edit-interview-date">Interview Date</label>
+            <input type="date" id="edit-interview-date" name="interviewDate" />
+          </div>
+          
+          <div class="form-row">
+            <label for="edit-notes">Notes</label>
+            <textarea id="edit-notes" name="notes" rows="4" placeholder="Phone screening completed, technical interview scheduled"></textarea>
+          </div>
+          
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="edit-cancel">Cancel</button>
+            <button type="submit" class="btn-primary">Update Application</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

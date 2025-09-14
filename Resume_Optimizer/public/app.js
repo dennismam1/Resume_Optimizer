@@ -354,25 +354,117 @@ async function exportCoverLetter(submissionId, format, button, tone, length) {
 function renderSubmissions(items, containerId, scope) {
   const list = document.getElementById(containerId);
   list.innerHTML = '';
-  (items || []).forEach(item => {
-    const div = document.createElement('div');
-    div.className = 'item';
-    const dt = new Date(item.createdAt).toLocaleString();
-    div.innerHTML = `
-      <div><strong>Created</strong>: ${dt}</div>
-      ${item.fileOriginalName ? `<div><strong>Resume</strong>: <a href="/uploads/${item.fileStoredName}" target="_blank" rel="noopener">${item.fileOriginalName}</a> <span class="muted">(${item.fileMimeType || ''}, ${item.fileSize || 0} bytes)</span></div>` : ''}
-      ${item.jobPostOriginalName ? `<div><strong>Job Posting</strong>: <a href="/uploads/${item.jobPostStoredName}" target="_blank" rel="noopener">${item.jobPostOriginalName}</a> <span class="muted">(${item.jobPostMimeType || ''}, ${item.jobPostFileSize || 0} bytes)</span></div>` : ''}
-      ${item.message ? `<div><strong>Message</strong>: ${item.message}</div>` : ''}
-      <div style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
-        <button data-action="analyze" data-scope="${scope}" data-id="${item._id}" ${item.fileStoredName ? '' : 'disabled'}>Analyze Resume</button>
-        ${item.fileStoredName && item.jobPostStoredName ? `<button data-action="ats-score" data-scope="${scope}" data-id="${item._id}">Calculate ATS Score</button>` : ''}
-        <button data-action="cover-letter" data-scope="${scope}" data-id="${item._id}" ${item.fileStoredName && item.jobPostStoredName ? '' : 'disabled'}>📄 Generate Cover Letter</button>
-        <span class="muted" id="analyze-status-${scope}-${item._id}"></span>
-      </div>
-      <div class="muted" id="analyze-output-${scope}-${item._id}" style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px; display:none;"></div>
-    `;
-    list.appendChild(div);
-  });
+  
+  if (scope === 'history') {
+    // New history design - job application cards
+    (items || []).forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'job-application-card';
+      
+      const appliedDate = new Date(item.lastAnalyzed || item.createdAt).toLocaleDateString();
+      const interviewDate = item.interviewDate ? new Date(item.interviewDate).toLocaleDateString() : '--.--.--';
+      
+      // Determine status - use manual status if available, otherwise derive from ATS score
+      let statusClass = 'status-pending';
+      let statusText = 'Pending';
+      
+      if (item.manualStatus) {
+        statusText = item.manualStatus;
+        switch (item.manualStatus) {
+          case 'Interview Scheduled':
+            statusClass = 'status-interview-scheduled';
+            break;
+          case 'Under Review':
+            statusClass = 'status-under-review';
+            break;
+          case 'Rejected':
+            statusClass = 'status-rejected';
+            break;
+          case 'Offer Received':
+            statusClass = 'status-offer-received';
+            break;
+          default:
+            statusClass = 'status-pending';
+        }
+      } else if (item.latestATSScore !== null) {
+        if (item.latestATSScore >= 80) {
+          statusClass = 'status-interview-scheduled';
+          statusText = 'Interview Scheduled';
+        } else if (item.latestATSScore >= 60) {
+          statusClass = 'status-under-review';
+          statusText = 'Under Review';
+        } else {
+          statusClass = 'status-rejected';
+          statusText = 'Rejected';
+        }
+      }
+      
+      div.innerHTML = `
+        <div class="job-card-header">
+          <div class="job-title">${item.jobTitle || 'Position Not Specified'}</div>
+          <div class="job-actions">
+            <button class="action-btn edit-btn" data-action="edit" data-scope="${scope}" data-id="${item._id}" title="Edit Application">✏️</button>
+            <button class="action-btn delete-btn" data-action="delete" data-scope="${scope}" data-id="${item._id}" title="Delete Application">🗑️</button>
+          </div>
+        </div>
+        <div class="company-name">${item.companyName || 'Company Not Specified'}</div>
+        
+        <div class="job-card-body">
+          <div class="job-status">
+            <div class="status-label">Status</div>
+            <div class="status-badge ${statusClass}">${statusText}</div>
+          </div>
+          
+          <div class="job-score">
+            <div class="score-label">ATS Score</div>
+            <div class="ats-score-badge">${item.latestATSScore !== null ? item.latestATSScore + '%' : '–'}</div>
+          </div>
+          
+          <div class="job-dates">
+            <div class="date-item">
+              <div class="date-label">Applied</div>
+              <div class="date-value">${appliedDate}</div>
+            </div>
+            <div class="date-item">
+              <div class="date-label">Interview</div>
+              <div class="date-value">${interviewDate}</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="job-card-actions">
+          ${item.fileStoredName && item.jobPostStoredName ? `<button class="action-button primary" data-action="ats-score" data-scope="${scope}" data-id="${item._id}">Calculate ATS Score</button>` : ''}
+          <button class="action-button secondary" data-action="cover-letter" data-scope="${scope}" data-id="${item._id}" ${item.fileStoredName && item.jobPostStoredName ? '' : 'disabled'}>Generate Cover Letter</button>
+        </div>
+        
+        <div class="muted" id="analyze-status-${scope}-${item._id}" style="margin-top: 8px; font-size: 0.9rem;"></div>
+        <div class="muted" id="analyze-output-${scope}-${item._id}" style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px; display:none; margin-top: 8px;"></div>
+      `;
+      list.appendChild(div);
+    });
+  } else {
+    // Original recent submissions design
+    (items || []).forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'item';
+      const dt = new Date(item.createdAt).toLocaleString();
+      div.innerHTML = `
+        <div><strong>Created</strong>: ${dt}</div>
+        ${item.fileOriginalName ? `<div><strong>Resume</strong>: <a href="/uploads/${item.fileStoredName}" target="_blank" rel="noopener">${item.fileOriginalName}</a> <span class="muted">(${item.fileMimeType || ''}, ${item.fileSize || 0} bytes)</span></div>` : ''}
+        ${item.jobPostOriginalName ? `<div><strong>Job Posting</strong>: <a href="/uploads/${item.jobPostStoredName}" target="_blank" rel="noopener">${item.jobPostOriginalName}</a> <span class="muted">(${item.jobPostMimeType || ''}, ${item.jobPostFileSize || 0} bytes)</span></div>` : ''}
+        ${item.message ? `<div><strong>Message</strong>: ${item.message}</div>` : ''}
+        <div style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
+          <button data-action="analyze" data-scope="${scope}" data-id="${item._id}" ${item.fileStoredName ? '' : 'disabled'}>Analyze Resume</button>
+          ${item.fileStoredName && item.jobPostStoredName ? `<button data-action="ats-score" data-scope="${scope}" data-id="${item._id}">Calculate ATS Score</button>` : ''}
+          <button data-action="cover-letter" data-scope="${scope}" data-id="${item._id}" ${item.fileStoredName && item.jobPostStoredName ? '' : 'disabled'}>📄 Generate Cover Letter</button>
+          <span class="muted" id="analyze-status-${scope}-${item._id}"></span>
+        </div>
+        <div class="muted" id="analyze-output-${scope}-${item._id}" style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px; display:none;"></div>
+      `;
+      list.appendChild(div);
+    });
+  }
+  
   if (!list.children.length) {
     list.innerHTML = '<div class="muted">No submissions yet.</div>';
   }
@@ -469,6 +561,100 @@ function renderSubmissions(items, containerId, scope) {
       }
     });
   });
+
+  // Add delete functionality for history view
+  list.querySelectorAll('button[data-action="delete"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      const sc = btn.getAttribute('data-scope');
+      
+      if (!confirm('Are you sure you want to delete this job application? This action cannot be undone.')) {
+        return;
+      }
+      
+      btn.disabled = true;
+      const originalText = btn.textContent;
+      btn.textContent = '⏳';
+      
+      try {
+        const res = await fetch(`/api/submissions/${id}`, { 
+          method: 'DELETE',
+          headers: AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : undefined
+        });
+        
+        if (!res.ok) {
+          const json = await res.json();
+          throw new Error(json.error || 'Failed to delete submission');
+        }
+        
+        // Remove the card from the DOM
+        btn.closest('.job-application-card, .item').remove();
+        
+        // Refresh the list if empty
+        if (!list.children.length) {
+          list.innerHTML = '<div class="muted">No submissions yet.</div>';
+        }
+        
+      } catch (err) {
+        console.error('Delete error:', err);
+        alert('Failed to delete: ' + err.message);
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    });
+  });
+
+  // Add edit functionality for history view
+  list.querySelectorAll('button[data-action="edit"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      openEditModal(id);
+    });
+  });
+}
+
+// Edit modal functionality
+function openEditModal(submissionId) {
+  const modal = document.getElementById('edit-modal');
+  const form = document.getElementById('edit-application-form');
+  
+  // Fetch current submission data
+  fetch(`/api/submissions/${submissionId}`, {
+    headers: AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : undefined
+  })
+  .then(res => res.json())
+  .then(data => {
+    const item = data.item;
+    
+    // Populate form fields
+    document.getElementById('edit-company-name').value = item.jobPostingData?.company_name || '';
+    document.getElementById('edit-position').value = item.jobPostingData?.job_title || '';
+    document.getElementById('edit-status').value = item.applicationStatus || 'Pending';
+    document.getElementById('edit-notes').value = item.notes || '';
+    
+    // Format date for input field
+    if (item.interviewDate) {
+      const date = new Date(item.interviewDate);
+      document.getElementById('edit-interview-date').value = date.toISOString().split('T')[0];
+    } else {
+      document.getElementById('edit-interview-date').value = '';
+    }
+    
+    // Store submission ID for form submission
+    form.dataset.submissionId = submissionId;
+    
+    // Show modal
+    modal.style.display = 'flex';
+  })
+  .catch(err => {
+    console.error('Failed to load submission data:', err);
+    alert('Failed to load application data');
+  });
+}
+
+function closeEditModal() {
+  const modal = document.getElementById('edit-modal');
+  modal.style.display = 'none';
 }
 
 async function updateStats() {
@@ -495,6 +681,13 @@ async function updateStats() {
       const improvement = stats.ats.improvement;
       const sign = improvement >= 0 ? '+' : '';
       atsImprovementEl.textContent = `${sign}${improvement}% improvement`;
+    }
+
+    // Update interviews scheduled KPI
+    const interviewsKpiSub = document.querySelectorAll('.kpi-sub')[2];
+    if (interviewsKpiSub && typeof stats.interviews === 'number') {
+      const interviewText = stats.interviews === 1 ? 'interview scheduled' : 'interviews scheduled';
+      interviewsKpiSub.textContent = `${stats.interviews} ${interviewText}`;
     }
   } catch (err) {
     console.error('Failed to update stats:', err);
@@ -620,8 +813,9 @@ window.addEventListener('DOMContentLoaded', () => {
           if (accountUsername && AUTH_USER) accountUsername.textContent = AUTH_USER.username;
           if (appContent) appContent.style.display = 'none';
           if (accountSection) accountSection.style.display = '';
-          // Load ATS progress chart when opening account
+          // Load ATS progress chart and update stats when opening account
           renderATSProgressChart();
+          updateStats();
         } else if (action === 'premium') {
           alert('Premium page is not implemented yet.');
         } else if (action === 'shortcuts') {
@@ -868,6 +1062,94 @@ window.addEventListener('DOMContentLoaded', () => {
       if (appContent) appContent.style.display = '';
       activateTab('history');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  // Edit modal event handlers
+  const editModal = document.getElementById('edit-modal');
+  const editForm = document.getElementById('edit-application-form');
+  const editModalClose = document.getElementById('edit-modal-close');
+  const editCancel = document.getElementById('edit-cancel');
+
+  // Close modal handlers
+  if (editModalClose) {
+    editModalClose.addEventListener('click', closeEditModal);
+  }
+  if (editCancel) {
+    editCancel.addEventListener('click', closeEditModal);
+  }
+
+  // Close modal when clicking outside
+  if (editModal) {
+    editModal.addEventListener('click', (e) => {
+      if (e.target === editModal) {
+        closeEditModal();
+      }
+    });
+  }
+
+  // Handle form submission
+  if (editForm) {
+    editForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const submissionId = editForm.dataset.submissionId;
+      if (!submissionId) {
+        alert('Invalid submission ID');
+        return;
+      }
+
+      const submitBtn = editForm.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Updating...';
+
+      try {
+        const formData = new FormData(editForm);
+        const updateData = {};
+        
+        for (const [key, value] of formData.entries()) {
+          if (value.trim()) {
+            updateData[key] = value;
+          }
+        }
+
+        const res = await fetch(`/api/submissions/${submissionId}`, {
+          method: 'PUT',
+          headers: Object.assign(
+            { 'Content-Type': 'application/json' }, 
+            AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : {}
+          ),
+          body: JSON.stringify(updateData)
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || 'Failed to update application');
+        }
+
+        // Close modal and refresh the list
+        closeEditModal();
+        await Promise.all([loadRecent(), updateStats()]); // Refresh the history list and stats
+        
+        // Show success message briefly
+        const statusEl = document.querySelector(`#analyze-status-history-${submissionId}`);
+        if (statusEl) {
+          statusEl.textContent = 'Application updated successfully';
+          statusEl.className = 'success';
+          setTimeout(() => {
+            statusEl.textContent = '';
+            statusEl.className = 'muted';
+          }, 3000);
+        }
+
+      } catch (err) {
+        console.error('Update error:', err);
+        alert('Failed to update application: ' + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
     });
   }
 });
