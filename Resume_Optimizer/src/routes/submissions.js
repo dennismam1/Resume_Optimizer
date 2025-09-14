@@ -97,9 +97,59 @@ router.get('/submissions/stats', async (req, res) => {
       createdAt: { $gte: startOfWeek }
     });
 
+    // Get submissions with ATS history
+    const submissions = await Submission.find(
+      { 'atsHistory.0': { $exists: true } },
+      { atsHistory: 1, createdAt: 1 }
+    ).lean();
+
+    // Calculate overall average
+    let totalScore = 0;
+    let scoreCount = 0;
+    let weeklyScores = [];
+    let previousWeekScores = [];
+
+    const previousWeekStart = new Date(startOfWeek);
+    previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+
+    submissions.forEach(sub => {
+      const latestScore = sub.atsHistory[sub.atsHistory.length - 1]?.score;
+      if (typeof latestScore === 'number') {
+        totalScore += latestScore;
+        scoreCount++;
+
+        if (sub.createdAt >= startOfWeek) {
+          weeklyScores.push(latestScore);
+        } else if (sub.createdAt >= previousWeekStart && sub.createdAt < startOfWeek) {
+          previousWeekScores.push(latestScore);
+        }
+      }
+    });
+
+    // Calculate averages
+    const overallAvg = scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0;
+    const weeklyAvg = weeklyScores.length > 0 
+      ? Math.round(weeklyScores.reduce((a, b) => a + b, 0) / weeklyScores.length) 
+      : 0;
+    const previousWeekAvg = previousWeekScores.length > 0
+      ? Math.round(previousWeekScores.reduce((a, b) => a + b, 0) / previousWeekScores.length)
+      : 0;
+
+    // Calculate improvement
+    let improvement = 0;
+    if (weeklyAvg > 0 && previousWeekAvg > 0) {
+      improvement = weeklyAvg - previousWeekAvg;
+    }
+
     res.json({
       total: totalCount,
-      weekly: weeklyCount
+      weekly: weeklyCount,
+      ats: {
+        average: overallAvg,
+        weeklyAverage: weeklyAvg,
+        previousWeekAverage: previousWeekAvg,
+        improvement: improvement
+      }
     });
   } catch (err) {
     console.error(err);

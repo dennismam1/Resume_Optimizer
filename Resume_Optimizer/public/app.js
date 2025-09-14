@@ -484,6 +484,18 @@ async function updateStats() {
     const weeklyEl = document.querySelector('.kpi-sub');
     if (totalEl) totalEl.textContent = stats.total;
     if (weeklyEl) weeklyEl.textContent = `+${stats.weekly} this week`;
+
+    // Update ATS score KPIs
+    const atsScoreEl = document.querySelectorAll('.kpi-value')[1];
+    const atsImprovementEl = document.querySelectorAll('.kpi-sub')[1];
+    if (atsScoreEl && stats.ats) {
+      atsScoreEl.textContent = `${stats.ats.average}%`;
+    }
+    if (atsImprovementEl && stats.ats) {
+      const improvement = stats.ats.improvement;
+      const sign = improvement >= 0 ? '+' : '';
+      atsImprovementEl.textContent = `${sign}${improvement}% improvement`;
+    }
   } catch (err) {
     console.error('Failed to update stats:', err);
   }
