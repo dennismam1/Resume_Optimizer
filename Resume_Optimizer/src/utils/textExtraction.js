@@ -1,4 +1,5 @@
 const fs = require('fs');
+const puppeteer = require('puppeteer');
 
 // Dynamically import text extraction libraries
 let pdfParse;
@@ -16,6 +17,45 @@ try {
 try {
   Tesseract = require('tesseract.js');
 } catch (e) {}
+/**
+ * Extract text content from a public web page URL using headless browser
+ * - Strips scripts/styles and returns visible text
+ * - Waits for network idle for basic client-side rendered pages
+ * @param {string} url
+ * @returns {Promise<string>}
+ */
+async function extractTextFromUrl(url) {
+  if (!url) return '';
+  let browser;
+  try {
+    browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: ['domcontentloaded', 'networkidle0'], timeout: 45000 });
+    // remove script/style and get innerText
+    const text = await page.evaluate(() => {
+      const cloned = document.documentElement.cloneNode(true);
+      // remove script and style
+      cloned.querySelectorAll('script, style, noscript').forEach(n => n.remove());
+      // attempt to remove nav/footer if overly long
+      cloned.querySelectorAll('header, nav, footer').forEach(n => n.remove());
+      const body = cloned.querySelector('body') || cloned;
+      const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, null);
+      const chunks = [];
+      /** @type {Text} */
+      let node;
+      while ((node = walker.nextNode())) {
+        const s = node.textContent.replace(/\s+/g, ' ').trim();
+        if (s.length) chunks.push(s);
+      }
+      return chunks.join('\n');
+    });
+    return text || '';
+  } catch (err) {
+    return '';
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
+}
 
 /**
  * Extract plain text from an uploaded file based on its MIME type
@@ -65,5 +105,6 @@ async function extractTextFromFile(filePath, mimeType) {
 }
 
 module.exports = {
-  extractTextFromFile
+  extractTextFromFile,
+  extractTextFromUrl
 };

@@ -1,5 +1,5 @@
 const { Submission } = require('../models/Submission');
-const { extractTextFromFile } = require('./textExtraction');
+const { extractTextFromFile, extractTextFromUrl } = require('./textExtraction');
 const { callNebius, extractJsonFromString } = require('../services/nebiusService');
 const { buildPrompt, buildJobPostingKeywordPrompt } = require('./promptBuilders');
 
@@ -70,9 +70,13 @@ async function getOrParseJobPostingData(item) {
   let jobPostingText = item.jobPostingText;
   if (!jobPostingText) {
     console.log('Extracting job posting text for submission:', item._id);
-    jobPostingText = await extractTextFromFile(item.jobPostFilePath, item.jobPostMimeType);
+    if (item.jobPostFilePath && item.jobPostMimeType) {
+      jobPostingText = await extractTextFromFile(item.jobPostFilePath, item.jobPostMimeType);
+    } else if (item.jobPostUrl) {
+      jobPostingText = await extractTextFromUrl(item.jobPostUrl);
+    }
     if (!jobPostingText || jobPostingText.trim().length === 0) {
-      throw new Error('Failed to extract text from job posting file');
+      throw new Error('Failed to extract text from job posting (file/URL)');
     }
   }
 
@@ -116,8 +120,8 @@ async function getOrParseBothData(submissionId, filtersArray = [], message = '',
   if (!item.filePath || !item.fileMimeType) {
     throw new Error('Resume file not found in submission');
   }
-  if (!item.jobPostFilePath || !item.jobPostMimeType) {
-    throw new Error('Job posting file not found in submission');
+  if (!((item.jobPostFilePath && item.jobPostMimeType) || item.jobPostUrl)) {
+    throw new Error('Job posting not found in submission (file or URL required)');
   }
 
   // Get or parse both datasets

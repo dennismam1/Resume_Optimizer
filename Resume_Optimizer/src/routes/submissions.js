@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const { Submission } = require('../models/Submission');
 const { upload } = require('../middleware');
+const validator = require('validator');
 
 const router = express.Router();
 
@@ -38,11 +39,26 @@ router.post('/submissions', upload.fields([{ name: 'file', maxCount: 1 }, { name
   try {
     const userId = req.user?.id;
     const { message } = req.body;
+    let { jobPostUrl } = req.body;
     const resumeFile = req.files && req.files['file'] ? req.files['file'][0] : null;
     const jobPostFile = req.files && req.files['jobPost'] ? req.files['jobPost'][0] : null;
 
-    if (!resumeFile && !jobPostFile && !message) {
-      return res.status(400).json({ error: 'Provide at least a resume file, job posting file, or a message.' });
+    // Normalize and validate URL if provided
+    if (typeof jobPostUrl === 'string') {
+      jobPostUrl = jobPostUrl.trim();
+      if (jobPostUrl.length === 0) jobPostUrl = undefined;
+      if (jobPostUrl && !validator.isURL(jobPostUrl, { require_protocol: true })) {
+        return res.status(400).json({ error: 'Invalid job posting URL. Include http(s):// prefix.' });
+      }
+    }
+
+    // Reject if both job post file and URL are provided
+    if (jobPostFile && jobPostUrl) {
+      return res.status(400).json({ error: 'Provide either a job posting file or a URL, not both.' });
+    }
+
+    if (!resumeFile && !jobPostFile && !jobPostUrl && !message) {
+      return res.status(400).json({ error: 'Provide at least a resume file, job posting file/URL, or a message.' });
     }
 
     const newSubmission = new Submission({
@@ -60,6 +76,8 @@ router.post('/submissions', upload.fields([{ name: 'file', maxCount: 1 }, { name
       jobPostMimeType: jobPostFile ? jobPostFile.mimetype : undefined,
       jobPostFilePath: jobPostFile ? jobPostFile.path : undefined,
       jobPostFileSize: jobPostFile ? jobPostFile.size : undefined,
+      // Job posting URL
+      jobPostUrl: jobPostUrl || undefined,
       
       message: message && message.trim().length > 0 ? message.trim() : undefined,
     });

@@ -29,6 +29,8 @@ const SubmissionSchema = new mongoose.Schema(
     jobPostMimeType: { type: String },
     jobPostFilePath: { type: String },
     jobPostFileSize: { type: Number, min: 0 },
+    // Job posting URL (alternative to file)
+    jobPostUrl: { type: String, trim: true },
 
     // Parsed data cache
     resumeData: {
