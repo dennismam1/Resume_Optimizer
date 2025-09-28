@@ -88,6 +88,12 @@
         </div>
 
         <div class="row">
+          <label for="jobPostUrl">Or Job Posting URL</label>
+          <input id="jobPostUrl" name="jobPostUrl" type="url" placeholder="https://example.com/job/software-engineer" oninput="toggleJobPostInputs()" />
+          <div class="muted">If provided, we will fetch and parse the job description text from this link.</div>
+        </div>
+
+        <div class="row">
           <label for="message">Additional Requirements (Optional)</label>
           <textarea id="message" name="message" rows="5" placeholder="Specify any particular skills, experience level, or requirements you’d like to emphasize in your application..."></textarea>
         </div>
