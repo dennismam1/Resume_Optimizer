@@ -64,7 +64,7 @@ router.post('/analyze', upload.single('file'), async (req, res) => {
     let resumeText = '';
     // Priority: submissionId → uploaded file → fileStoredName → raw text
     if (submissionId) {
-      const item = await Submission.findById(String(submissionId)).lean();
+      const item = await Submission.findOne({ _id: String(submissionId), userId: req.user?.id }).lean();
       if (!item) {
         return res.status(404).json({ error: 'Submission not found' });
       }
@@ -81,7 +81,7 @@ router.post('/analyze', upload.single('file'), async (req, res) => {
         return res.status(422).json({ error: 'Failed to extract text from the uploaded file.' });
       }
     } else if (fileStoredName) {
-      const item = await Submission.findOne({ fileStoredName: String(fileStoredName) }).lean();
+      const item = await Submission.findOne({ fileStoredName: String(fileStoredName), userId: req.user?.id }).lean();
       if (!item) {
         return res.status(404).json({ error: 'Submission with given fileStoredName not found' });
       }
@@ -103,11 +103,12 @@ router.post('/analyze', upload.single('file'), async (req, res) => {
       }
 
       try {
-        // Use cached data or parse if not available
+        // Use cached data or parse if not available, enforcing ownership
         const { resumeData, jobPostingData } = await getOrParseBothData(
           String(submissionId), 
           filtersArray, 
-          message
+          message,
+          req.user?.id
         );
 
         // Calculate ATS score
@@ -115,7 +116,7 @@ router.post('/analyze', upload.single('file'), async (req, res) => {
 
         // Persist to ATS history for the submission
         try {
-          await Submission.findByIdAndUpdate(String(submissionId), {
+          await Submission.updateOne({ _id: String(submissionId), userId: req.user?.id }, {
             $push: {
               atsHistory: {
                 score: atsResult.ats_score,
@@ -151,7 +152,7 @@ router.post('/analyze', upload.single('file'), async (req, res) => {
     // Try to use cached data if submissionId is provided and we have cached resume data
     if (submissionId) {
       try {
-        const item = await Submission.findById(String(submissionId));
+        const item = await Submission.findOne({ _id: String(submissionId), userId: req.user?.id });
         if (item && item.resumeData && item.resumeDataParsedAt) {
           console.log('Using cached resume data for regular analysis');
           json = item.resumeData;
@@ -172,7 +173,7 @@ router.post('/analyze', upload.single('file'), async (req, res) => {
       // Cache the result if we have a submissionId
       if (submissionId && json) {
         try {
-          await Submission.findByIdAndUpdate(String(submissionId), {
+          await Submission.updateOne({ _id: String(submissionId), userId: req.user?.id }, {
             resumeData: json,
             resumeText: resumeText,
             resumeDataParsedAt: new Date()

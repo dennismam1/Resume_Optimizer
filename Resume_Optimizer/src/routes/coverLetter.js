@@ -22,7 +22,10 @@ router.post('/generate-cover-letter', async (req, res) => {
 
     // Use cached data or parse if not available
     const { resumeData, jobPostingData, resumeText, jobPostingText } = await getOrParseBothData(
-      String(submissionId)
+      String(submissionId),
+      [],
+      '',
+      req.user?.id
     );
 
     // Generate cover letter using Nebius
@@ -56,7 +59,10 @@ router.post('/export-cover-letter/word', async (req, res) => {
 
     // Use cached data or parse if not available
     const { resumeData, jobPostingData, resumeText, jobPostingText } = await getOrParseBothData(
-      String(submissionId)
+      String(submissionId),
+      [],
+      '',
+      req.user?.id
     );
 
     // Generate cover letter
@@ -92,7 +98,10 @@ router.post('/export-cover-letter/pdf', async (req, res) => {
 
     // Use cached data or parse if not available
     const { resumeData, jobPostingData, resumeText, jobPostingText } = await getOrParseBothData(
-      String(submissionId)
+      String(submissionId),
+      [],
+      '',
+      req.user?.id
     );
 
     // Generate cover letter

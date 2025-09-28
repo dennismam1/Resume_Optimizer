@@ -5,11 +5,12 @@ const { upload } = require('../middleware');
 
 const router = express.Router();
 
-// ATS History endpoint: returns chronological (ascending) series of {date, score}
+// ATS History endpoint: returns chronological (ascending) series of {date, score} for current user
 router.get('/ats/history', async (req, res) => {
   try {
-    // Fetch latest 100 submissions with any atsHistory entries
-    const submissions = await Submission.find({ 'atsHistory.0': { $exists: true } })
+    const userId = req.user?.id;
+    // Fetch latest 100 submissions with any atsHistory entries for this user
+    const submissions = await Submission.find({ userId, 'atsHistory.0': { $exists: true } })
       .sort({ createdAt: -1 })
       .limit(100)
       .lean();
@@ -35,6 +36,7 @@ router.get('/ats/history', async (req, res) => {
 // Create submission with both resume and job posting files
 router.post('/submissions', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'jobPost', maxCount: 1 }]), async (req, res) => {
   try {
+    const userId = req.user?.id;
     const { message } = req.body;
     const resumeFile = req.files && req.files['file'] ? req.files['file'][0] : null;
     const jobPostFile = req.files && req.files['jobPost'] ? req.files['jobPost'][0] : null;
@@ -44,6 +46,7 @@ router.post('/submissions', upload.fields([{ name: 'file', maxCount: 1 }, { name
     }
 
     const newSubmission = new Submission({
+      userId,
       // Resume file
       fileOriginalName: resumeFile ? resumeFile.originalname : undefined,
       fileStoredName: resumeFile ? path.basename(resumeFile.path) : undefined,
@@ -72,10 +75,11 @@ router.post('/submissions', upload.fields([{ name: 'file', maxCount: 1 }, { name
   }
 });
 
-// List submissions
+// List submissions for current user
 router.get('/submissions', async (req, res) => {
   try {
-    const items = await Submission.find().sort({ createdAt: -1 }).limit(50).lean();
+    const userId = req.user?.id;
+    const items = await Submission.find({ userId }).sort({ createdAt: -1 }).limit(50).lean();
     
     // Enrich submissions with job info and latest ATS scores
     const enrichedItems = items.map(item => {
@@ -108,23 +112,25 @@ router.get('/submissions', async (req, res) => {
   }
 });
 
-// Get submission statistics
+// Get submission statistics for current user
 router.get('/submissions/stats', async (req, res) => {
   try {
+    const userId = req.user?.id;
     // Get total count
-    const totalCount = await Submission.countDocuments();
+    const totalCount = await Submission.countDocuments({ userId });
     
     // Get count for this week
     const startOfWeek = new Date();
     startOfWeek.setHours(0, 0, 0, 0);
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
     const weeklyCount = await Submission.countDocuments({
+      userId,
       createdAt: { $gte: startOfWeek }
     });
 
     // Get submissions with ATS history
     const submissions = await Submission.find(
-      { 'atsHistory.0': { $exists: true } },
+      { userId, 'atsHistory.0': { $exists: true } },
       { atsHistory: 1, createdAt: 1 }
     ).lean();
 
@@ -168,6 +174,7 @@ router.get('/submissions/stats', async (req, res) => {
 
     // Count interviews scheduled
     const interviewsScheduled = await Submission.countDocuments({
+      userId,
       applicationStatus: 'Interview Scheduled'
     });
 
@@ -188,11 +195,12 @@ router.get('/submissions/stats', async (req, res) => {
   }
 });
 
-// Get single submission
+// Get single submission (must belong to current user)
 router.get('/submissions/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const item = await Submission.findById(id).lean();
+    const userId = req.user?.id;
+    const item = await Submission.findOne({ _id: id, userId }).lean();
     if (!item) return res.status(404).json({ error: 'Not found' });
     res.json({ item });
   } catch (err) {
@@ -201,17 +209,18 @@ router.get('/submissions/:id', async (req, res) => {
   }
 });
 
-// Update submission details
+// Update submission details (must belong to current user)
 router.put('/submissions/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user?.id;
     const { companyName, jobTitle, applicationStatus, interviewDate, notes } = req.body;
     
     const updateData = {};
     
     // Update job posting data if company name or job title changed
     if (companyName || jobTitle) {
-      const item = await Submission.findById(id);
+      const item = await Submission.findOne({ _id: id, userId });
       if (!item) return res.status(404).json({ error: 'Not found' });
       
       const currentJobData = item.jobPostingData || {};
@@ -227,8 +236,8 @@ router.put('/submissions/:id', async (req, res) => {
     if (interviewDate) updateData.interviewDate = new Date(interviewDate);
     if (notes !== undefined) updateData.notes = notes;
     
-    const updatedItem = await Submission.findByIdAndUpdate(
-      id, 
+    const updatedItem = await Submission.findOneAndUpdate(
+      { _id: id, userId }, 
       updateData, 
       { new: true, runValidators: true }
     );
@@ -241,11 +250,12 @@ router.put('/submissions/:id', async (req, res) => {
   }
 });
 
-// Delete submission
+// Delete submission (must belong to current user)
 router.delete('/submissions/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const item = await Submission.findByIdAndDelete(id);
+    const userId = req.user?.id;
+    const item = await Submission.findOneAndDelete({ _id: id, userId });
     if (!item) return res.status(404).json({ error: 'Not found' });
     res.json({ message: 'Submission deleted successfully' });
   } catch (err) {

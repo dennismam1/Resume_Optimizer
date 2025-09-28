@@ -100,12 +100,14 @@ async function getOrParseJobPostingData(item) {
 /**
  * Get both resume and job posting data with caching
  * @param {string} submissionId - Submission ID
+ * @param {string} userId - Current user ID for ownership check
  * @param {Array} filtersArray - Fields to extract for resume
  * @param {string} message - Additional instructions for resume
  * @returns {Promise<{resumeData: Object, jobPostingData: Object, resumeText: string, jobPostingText: string}>}
  */
-async function getOrParseBothData(submissionId, filtersArray = [], message = '') {
-  const item = await Submission.findById(submissionId);
+async function getOrParseBothData(submissionId, filtersArray = [], message = '', userId = null) {
+  const query = userId ? { _id: submissionId, userId } : { _id: submissionId };
+  const item = await Submission.findOne(query);
   if (!item) {
     throw new Error('Submission not found');
   }

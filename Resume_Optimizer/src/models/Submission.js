@@ -13,6 +13,9 @@ const FileSchema = new mongoose.Schema(
 
 const SubmissionSchema = new mongoose.Schema(
   {
+    // Owner
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
+
     // Resume file
     fileOriginalName: { type: String },
     fileStoredName: { type: String },
@@ -86,6 +89,7 @@ const SubmissionSchema = new mongoose.Schema(
 );
 
 SubmissionSchema.index({ createdAt: -1 });
+SubmissionSchema.index({ userId: 1, createdAt: -1 });
 
 const Submission = mongoose.model('Submission', SubmissionSchema);
 
