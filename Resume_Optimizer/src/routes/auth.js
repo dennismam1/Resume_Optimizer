@@ -1,18 +1,37 @@
 const express = require('express');
 const { User } = require('../models/User');
 const { Session } = require('../models/Session');
+const config = require('../config');
 const { generateSalt, hashPassword, verifyPassword, generateSessionToken } = require('../utils/auth');
 
 const router = express.Router();
+
+// Basic email validation regex
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 router.post('/auth/register', async (req, res) => {
   try {
     const { username, password } = req.body || {};
     if (!username || !password) {
-      return res.status(400).json({ error: 'username and password are required' });
+      return res.status(400).json({ error: 'email and password are required' });
     }
 
-    const existing = await User.findOne({ username: String(username) }).lean();
+    const email = String(username).trim().toLowerCase();
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ error: 'email must be a valid email address' });
+    }
+
+    // Optional: block registrations entirely unless explicitly allowed
+    if (!config.ALLOW_REGISTRATION) {
+      return res.status(403).json({ error: 'Registration disabled' });
+    }
+
+    // Enforce allowlist for registration as an extra safety
+    if (!config.ALLOWED_EMAILS.has(email)) {
+      return res.status(403).json({ error: 'Registration restricted' });
+    }
+
+    const existing = await User.findOne({ username: email }).lean();
     if (existing) {
       return res.status(409).json({ error: 'Username already exists' });
     }
@@ -20,7 +39,7 @@ router.post('/auth/register', async (req, res) => {
     const salt = generateSalt();
     const passwordHash = hashPassword(password, salt);
 
-    const user =  await User.create({ username: String(username), passwordHash, passwordSalt: salt });
+    const user =  await User.create({ username: email, passwordHash, passwordSalt: salt });
 
     return res.status(201).json({ ok: true, user: { id: String(user._id), username: user.username } });
   } catch (err) {
@@ -33,12 +52,19 @@ router.post('/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body || {};
     if (!username || !password) {
-      return res.status(400).json({ error: 'username and password are required' });
+      return res.status(400).json({ error: 'email and password are required' });
     }
 
-    const user = await User.findOne({ username: String(username) });
+    const email = String(username).trim().toLowerCase();
+
+    const user = await User.findOne({ username: email });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Enforce allowlist at login
+    if (!config.ALLOWED_EMAILS.has(email)) {
+      return res.status(403).json({ error: 'Access restricted' });
     }
 
     const ok = verifyPassword(String(password), user.passwordSalt, user.passwordHash);

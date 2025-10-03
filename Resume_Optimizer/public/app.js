@@ -83,6 +83,33 @@ function fileChanged(input, labelId) {
     ? 'Drop your resume here'
     : 'Upload job description';
   label.textContent = input.files && input.files[0] ? input.files[0].name : defaultText;
+  // Maintain mutual exclusivity when job post file changes
+  if (input && input.id === 'jobPost') {
+    toggleJobPostInputs();
+  }
+}
+
+// Toggle mutual exclusion between job post file and URL inputs
+function toggleJobPostInputs() {
+  const jobPostFile = document.getElementById('jobPost');
+  const jobPostUrl = document.getElementById('jobPostUrl');
+  const jobPostLabel = document.querySelector('label.upload-button[for="jobPost"]');
+  if (!jobPostFile || !jobPostUrl) return;
+
+  const hasFile = !!(jobPostFile.files && jobPostFile.files.length > 0);
+  const hasUrl = !!(jobPostUrl.value && jobPostUrl.value.trim().length > 0);
+
+  // If URL present (and file not already selected), disable file input/label; if file present (and URL not already typed), disable URL
+  const disableFile = hasUrl && !hasFile;
+  const disableUrl = hasFile && !hasUrl;
+
+  jobPostFile.disabled = disableFile;
+  jobPostUrl.disabled = disableUrl;
+
+  if (jobPostLabel) {
+    jobPostLabel.style.pointerEvents = jobPostFile.disabled ? 'none' : '';
+    jobPostLabel.style.opacity = jobPostFile.disabled ? '0.6' : '';
+  }
 }
 
 function renderATSScorecard(data, containerId) {
@@ -433,8 +460,8 @@ function renderSubmissions(items, containerId, scope) {
         </div>
         
         <div class="job-card-actions">
-          ${item.fileStoredName && item.jobPostStoredName ? `<button class="action-button primary" data-action="ats-score" data-scope="${scope}" data-id="${item._id}">Calculate ATS Score</button>` : ''}
-          <button class="action-button secondary" data-action="cover-letter" data-scope="${scope}" data-id="${item._id}" ${item.fileStoredName && item.jobPostStoredName ? '' : 'disabled'}>Generate Cover Letter</button>
+          ${item.fileStoredName && (item.jobPostStoredName || item.jobPostUrl) ? `<button class="action-button primary" data-action="ats-score" data-scope="${scope}" data-id="${item._id}">Calculate ATS Score</button>` : ''}
+          <button class="action-button secondary" data-action="cover-letter" data-scope="${scope}" data-id="${item._id}" ${item.fileStoredName && (item.jobPostStoredName || item.jobPostUrl) ? '' : 'disabled'}>Generate Cover Letter</button>
         </div>
         
         <div class="muted" id="analyze-status-${scope}-${item._id}" style="margin-top: 8px; font-size: 0.9rem;"></div>
@@ -455,8 +482,8 @@ function renderSubmissions(items, containerId, scope) {
         ${item.message ? `<div><strong>Message</strong>: ${item.message}</div>` : ''}
         <div style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
           <button data-action="analyze" data-scope="${scope}" data-id="${item._id}" ${item.fileStoredName ? '' : 'disabled'}>Analyze Resume</button>
-          ${item.fileStoredName && item.jobPostStoredName ? `<button data-action="ats-score" data-scope="${scope}" data-id="${item._id}">Calculate ATS Score</button>` : ''}
-          <button data-action="cover-letter" data-scope="${scope}" data-id="${item._id}" ${item.fileStoredName && item.jobPostStoredName ? '' : 'disabled'}>📄 Generate Cover Letter</button>
+        ${item.fileStoredName && (item.jobPostStoredName || item.jobPostUrl) ? `<button data-action="ats-score" data-scope="${scope}" data-id="${item._id}">Calculate ATS Score</button>` : ''}
+        <button data-action="cover-letter" data-scope="${scope}" data-id="${item._id}" ${item.fileStoredName && (item.jobPostStoredName || item.jobPostUrl) ? '' : 'disabled'}>📄 Generate Cover Letter</button>
           <span class="muted" id="analyze-status-${scope}-${item._id}"></span>
         </div>
         <div class="muted" id="analyze-output-${scope}-${item._id}" style="white-space:pre-wrap; background:#f6f8fa; padding:8px; border-radius:6px; display:none;"></div>
@@ -833,7 +860,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (loginBtn) loginBtn.addEventListener('click', async () => {
     status.textContent = '';
     try {
-      const username = usernameInput.value.trim();
+      const username = usernameInput.value.trim().toLowerCase();
       const password = passwordInput.value;
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -860,7 +887,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (registerBtn) registerBtn.addEventListener('click', async () => {
     status.textContent = '';
     try {
-      const username = usernameInput.value.trim();
+      const username = usernameInput.value.trim().toLowerCase();
       const password = passwordInput.value;
       const res = await fetch('/api/auth/register', {
         method: 'POST',

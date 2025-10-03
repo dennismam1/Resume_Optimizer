@@ -44,7 +44,16 @@ const config = {
     'education',
     'certifications',
     'notable_projects'
-  ]
+  ],
+
+  // Access control
+  ALLOWED_EMAILS: new Set(
+    String(process.env.ALLOWED_EMAILS || 'mamachandennis@gmail.com')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean)
+  ),
+  ALLOW_REGISTRATION: process.env.ALLOW_REGISTRATION === 'true'
 };
 
 module.exports = config;

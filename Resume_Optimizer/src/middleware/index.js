@@ -50,9 +50,9 @@ function configureMiddleware(app) {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Static files
+  // Static files (disable default index to allow custom landing route at '/')
   const publicDir = path.join(__dirname, '..', '..', 'public');
-  app.use(express.static(publicDir));
+  app.use(express.static(publicDir, { index: false }));
   app.use('/uploads', express.static(config.UPLOAD_DIR));
 }
 

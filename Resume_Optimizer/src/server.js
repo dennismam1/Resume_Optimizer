@@ -24,8 +24,13 @@ app.use('/api', authRequired, analysisRoutes);
 app.use('/api', authRequired, coverLetterRoutes);
 app.use('/api', authRequired, submissionsRoutes);
 
-// Serve index.html on root
+// Serve landing page on root and app at /app
 app.get('/', (req, res) => {
+  const publicDir = path.join(__dirname, '..', 'public');
+  res.sendFile(path.join(publicDir, 'landing.html'));
+});
+
+app.get('/app', (req, res) => {
   const publicDir = path.join(__dirname, '..', 'public');
   res.sendFile(path.join(publicDir, 'index.html'));
 });
