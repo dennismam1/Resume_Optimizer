@@ -8,6 +8,7 @@ const { configureMiddleware } = require('./middleware');
 const analysisRoutes = require('./routes/analysis');
 const coverLetterRoutes = require('./routes/coverLetter');
 const submissionsRoutes = require('./routes/submissions');
+const jobSearchRoutes = require('./routes/jobSearch');
 const authRoutes = require('./routes/auth');
 const { authRequired } = require('./middleware/auth');
 
@@ -23,6 +24,7 @@ app.use('/api', authRoutes);
 app.use('/api', authRequired, analysisRoutes);
 app.use('/api', authRequired, coverLetterRoutes);
 app.use('/api', authRequired, submissionsRoutes);
+app.use('/api', authRequired, jobSearchRoutes);
 
 // Serve landing page on root and app at /app
 app.get('/', (req, res) => {

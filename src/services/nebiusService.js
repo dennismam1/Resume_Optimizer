@@ -3,9 +3,14 @@ const config = require('../config');
 /**
  * Call Nebius API with the given prompt
  * @param {string} prompt - The prompt to send to Nebius
+ * @param {Object} [options]
+ * @param {number} [options.maxTokens]
+ * @param {number} [options.temperature]
+ * @param {number} [options.top_p]
+ * @param {string} [options.system]
  * @returns {Promise<string>} - The response content
  */
-async function callNebius(prompt) {
+async function callNebius(prompt, options = {}) {
   if (!config.NEBIUS_API_KEY || config.NEBIUS_API_KEY === 'your-nebius-api-key-here') {
     throw new Error('Missing Nebius API key. Set NEBIUS_API_KEY environment variable.');
   }
@@ -19,16 +24,16 @@ async function callNebius(prompt) {
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful assistant that extracts structured information from resumes and returns valid JSON.'
+          content: options.system || 'You are a helpful assistant that extracts structured information from resumes and returns valid JSON.'
         },
         {
           role: 'user',
           content: prompt
         }
       ],
-      max_tokens: 512,
-      temperature: 0.2,
-      top_p: 0.9
+      max_tokens: Math.max(1, Math.min(Number(options.maxTokens || 512), 4096)),
+      temperature: options.temperature == null ? 0.2 : options.temperature,
+      top_p: options.top_p == null ? 0.9 : options.top_p
     };
 
     const response = await fetch(config.NEBIUS_API_URL, {

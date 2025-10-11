@@ -1127,21 +1127,84 @@ window.addEventListener('DOMContentLoaded', () => {
   const jobsearchResults = document.getElementById('jobsearch-results');
   const jobsearchKeywords = document.getElementById('jobsearch-keywords');
   const jobsearchLocation = document.getElementById('jobsearch-location');
+  const jobsearchEntry = document.getElementById('jobsearch-entry');
   if (jobsearchBtn && jobsearchStatus && jobsearchResults) {
     jobsearchBtn.addEventListener('click', async () => {
       const kw = jobsearchKeywords ? jobsearchKeywords.value.trim() : '';
       const loc = jobsearchLocation ? jobsearchLocation.value.trim() : '';
-      jobsearchStatus.textContent = 'Searching...';
+      const entry = jobsearchEntry ? jobsearchEntry.value.trim() : '';
+      jobsearchStatus.textContent = 'Searching suggestions...';
       jobsearchResults.innerHTML = '';
-      // Placeholder: simulate search delay
-      await new Promise(r => setTimeout(r, 600));
-      jobsearchStatus.textContent = '';
-      const placeholder = document.createElement('div');
-      placeholder.className = 'item';
-      placeholder.innerHTML = `<div><strong>No live job source connected.</strong></div>
-<div class="muted">Search query: ${kw || '(any)'} ${loc ? '· ' + loc : ''}</div>
-<div class="muted">You can paste a job posting URL in Submit, or upload a job post file to analyze and track here.</div>`;
-      jobsearchResults.appendChild(placeholder);
+      try {
+        // Find latest submission to base suggestions on
+        const subsRes = await fetch('/api/submissions', { headers: AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : undefined });
+        const subsJson = await subsRes.json();
+        const submissionId = subsJson.items && subsJson.items[0] ? subsJson.items[0]._id : null;
+        if (!submissionId) {
+          jobsearchStatus.textContent = '';
+          const noSub = document.createElement('div');
+          noSub.className = 'item';
+          noSub.innerHTML = '<div><strong>No resume found.</strong></div><div class="muted">Upload a resume in Submit to get tailored suggestions.</div>';
+          jobsearchResults.appendChild(noSub);
+          return;
+        }
+
+        const url = new URL(window.location.origin + '/api/job-suggestions');
+        url.searchParams.set('submissionId', submissionId);
+        if (loc) url.searchParams.set('location', loc);
+        if (entry) url.searchParams.set('entryType', entry);
+
+        // Add cache buster and no-store
+        url.searchParams.set('_', Date.now().toString());
+        const res = await fetch(url.toString(), { headers: Object.assign({ 'Cache-Control': 'no-store' }, AUTH_TOKEN ? { 'Authorization': `Bearer ${AUTH_TOKEN}` } : {}) });
+        const json = await res.json();
+        jobsearchStatus.textContent = '';
+        if (!res.ok) {
+          throw new Error(json.error || 'Failed to get suggestions');
+        }
+
+        const items = json.items || [];
+        if (!items.length) {
+          const empty = document.createElement('div');
+          empty.className = 'item';
+          empty.innerHTML = '<div><strong>No suggestions.</strong></div><div class="muted">Try adjusting entry type or location.</div>';
+          jobsearchResults.appendChild(empty);
+          return;
+        }
+
+        // Render suggestion cards
+        items.forEach(s => {
+          const card = document.createElement('div');
+          card.className = 'job-application-card';
+          const companies = Array.isArray(s.example_companies) && s.example_companies.length ? s.example_companies.join(', ') : '—';
+          const keywords = Array.isArray(s.keywords) && s.keywords.length ? s.keywords.map(k => `<span class="ats-skill-tag">${k}</span>`).join(' ') : '';
+          const links = Array.isArray(s.links) && s.links.length
+            ? s.links.map(l => `<a href="${l.url}" target="_blank" rel="noopener">${l.label || 'Job Link'}</a>`).join(' · ')
+            : '';
+          card.innerHTML = `
+            <div class="job-card-header">
+              <div class="job-title">${s.title || 'Suggested Role'}</div>
+            </div>
+            <div class="company-name">Examples: ${companies}</div>
+            <div class="job-card-body" style="grid-template-columns: 1fr;">
+              <div>
+                <div class="score-label">Why this fits</div>
+                <div class="muted">${s.why_fit || ''}</div>
+              </div>
+            </div>
+            <div style="margin-top: 8px;">${keywords}</div>
+            ${links ? `<div style="margin-top: 8px;"><div class="score-label">Search Links</div><div>${links}</div></div>` : ''}
+          `;
+          jobsearchResults.appendChild(card);
+        });
+
+      } catch (err) {
+        jobsearchStatus.textContent = '';
+        const error = document.createElement('div');
+        error.className = 'item';
+        error.innerHTML = `<div><strong>Error:</strong> ${err.message}</div>`;
+        jobsearchResults.appendChild(error);
+      }
     });
   }
 
