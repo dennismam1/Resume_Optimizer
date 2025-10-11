@@ -64,6 +64,7 @@
       <div class="tabs">
         <button id="tab-submit" class="tab active" type="button">Submit</button>
         <button id="tab-history" class="tab" type="button">History</button>
+        <button id="tab-jobsearch" class="tab" type="button">Job Search</button>
       </div>
 
       <div id="submit-section">
@@ -111,6 +112,26 @@
         <h1>Job Application History</h1>
         <p class="helper">Track your job applications, ATS scores, and interview schedules.</p>
         <div class="list" id="history"></div>
+      </div>
+
+      <div id="jobsearch-section" style="display:none;">
+        <h1>Job Search</h1>
+        <p class="helper">Search for job postings and track them here.</p>
+        <form id="jobsearch-form" class="card" onsubmit="return false;">
+          <div class="row">
+            <label for="jobsearch-keywords">Keywords</label>
+            <input id="jobsearch-keywords" type="text" placeholder="e.g., Frontend Developer, React, Node.js" />
+          </div>
+          <div class="row">
+            <label for="jobsearch-location">Location</label>
+            <input id="jobsearch-location" type="text" placeholder="e.g., Remote, New York" />
+          </div>
+          <div class="row">
+            <button id="jobsearch-btn" type="button">Search Jobs</button>
+            <div id="jobsearch-status" class="muted"></div>
+          </div>
+        </form>
+        <div class="list" id="jobsearch-results"></div>
       </div>
     </div>
 

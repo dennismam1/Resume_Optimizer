@@ -769,24 +769,40 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Tabs setup
   const tabSubmit = document.getElementById('tab-submit');
   const tabHistory = document.getElementById('tab-history');
+  const tabJobsearch = document.getElementById('tab-jobsearch');
   const submitSection = document.getElementById('submit-section');
   const historySection = document.getElementById('history-section');
-  if (tabSubmit && tabHistory && submitSection && historySection) {
+  const jobsearchSection = document.getElementById('jobsearch-section');
+  if (tabSubmit && tabHistory && tabJobsearch && submitSection && historySection && jobsearchSection) {
     const activate = (which) => {
       if (which === 'submit') {
         tabSubmit.classList.add('active');
         tabHistory.classList.remove('active');
+        tabJobsearch.classList.remove('active');
         submitSection.style.display = '';
         historySection.style.display = 'none';
+        jobsearchSection.style.display = 'none';
       } else {
-        tabSubmit.classList.remove('active');
-        tabHistory.classList.add('active');
-        submitSection.style.display = 'none';
-        historySection.style.display = '';
+        if (which === 'history') {
+          tabSubmit.classList.remove('active');
+          tabHistory.classList.add('active');
+          tabJobsearch.classList.remove('active');
+          submitSection.style.display = 'none';
+          historySection.style.display = '';
+          jobsearchSection.style.display = 'none';
+        } else if (which === 'jobsearch') {
+          tabSubmit.classList.remove('active');
+          tabHistory.classList.remove('active');
+          tabJobsearch.classList.add('active');
+          submitSection.style.display = 'none';
+          historySection.style.display = 'none';
+          jobsearchSection.style.display = '';
+        }
       }
     };
     tabSubmit.addEventListener('click', () => activate('submit'));
     tabHistory.addEventListener('click', () => activate('history'));
+    tabJobsearch.addEventListener('click', () => activate('jobsearch'));
   }
 });
 
@@ -1055,23 +1071,36 @@ window.addEventListener('DOMContentLoaded', () => {
   const qaHistory = document.getElementById('qa-btn-history');
   const tabSubmit = document.getElementById('tab-submit');
   const tabHistory = document.getElementById('tab-history');
+  const tabJobsearch = document.getElementById('tab-jobsearch');
   const submitSection = document.getElementById('submit-section');
   const historySection = document.getElementById('history-section');
+  const jobsearchSection = document.getElementById('jobsearch-section');
   const appContent = document.getElementById('app-content');
   const accountSection = document.getElementById('account-section');
 
   const activateTab = (which) => {
-    if (!tabSubmit || !tabHistory || !submitSection || !historySection) return;
+    if (!tabSubmit || !tabHistory || !tabJobsearch || !submitSection || !historySection || !jobsearchSection) return;
     if (which === 'submit') {
       tabSubmit.classList.add('active');
       tabHistory.classList.remove('active');
+      tabJobsearch.classList.remove('active');
       submitSection.style.display = '';
       historySection.style.display = 'none';
-    } else {
+      jobsearchSection.style.display = 'none';
+    } else if (which === 'history') {
       tabSubmit.classList.remove('active');
       tabHistory.classList.add('active');
+      tabJobsearch.classList.remove('active');
       submitSection.style.display = 'none';
       historySection.style.display = '';
+      jobsearchSection.style.display = 'none';
+    } else if (which === 'jobsearch') {
+      tabSubmit.classList.remove('active');
+      tabHistory.classList.remove('active');
+      tabJobsearch.classList.add('active');
+      submitSection.style.display = 'none';
+      historySection.style.display = 'none';
+      jobsearchSection.style.display = '';
     }
   };
 
@@ -1089,6 +1118,30 @@ window.addEventListener('DOMContentLoaded', () => {
       if (appContent) appContent.style.display = '';
       activateTab('history');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  // Job Search basic handler (placeholder)
+  const jobsearchBtn = document.getElementById('jobsearch-btn');
+  const jobsearchStatus = document.getElementById('jobsearch-status');
+  const jobsearchResults = document.getElementById('jobsearch-results');
+  const jobsearchKeywords = document.getElementById('jobsearch-keywords');
+  const jobsearchLocation = document.getElementById('jobsearch-location');
+  if (jobsearchBtn && jobsearchStatus && jobsearchResults) {
+    jobsearchBtn.addEventListener('click', async () => {
+      const kw = jobsearchKeywords ? jobsearchKeywords.value.trim() : '';
+      const loc = jobsearchLocation ? jobsearchLocation.value.trim() : '';
+      jobsearchStatus.textContent = 'Searching...';
+      jobsearchResults.innerHTML = '';
+      // Placeholder: simulate search delay
+      await new Promise(r => setTimeout(r, 600));
+      jobsearchStatus.textContent = '';
+      const placeholder = document.createElement('div');
+      placeholder.className = 'item';
+      placeholder.innerHTML = `<div><strong>No live job source connected.</strong></div>
+<div class="muted">Search query: ${kw || '(any)'} ${loc ? '· ' + loc : ''}</div>
+<div class="muted">You can paste a job posting URL in Submit, or upload a job post file to analyze and track here.</div>`;
+      jobsearchResults.appendChild(placeholder);
     });
   }
 
