@@ -1,7 +1,7 @@
 const express = require('express');
 const { Submission } = require('../models/Submission');
 const { extractTextFromFile } = require('../utils/textExtraction');
-const { callNebius, extractJsonFromString } = require('../services/nebiusService');
+const { callOpenAI, extractJsonFromString } = require('../services/openaiService');
 const { buildPrompt, buildJobPostingKeywordPrompt } = require('../utils/promptBuilders');
 const { calculateSemanticSimilarity } = require('../utils/atsScoring');
 const { getOrParseBothData, getOrParseResumeData } = require('../utils/dataCache');
@@ -15,29 +15,29 @@ router.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Test Nebius API
-router.get('/test-nebius', async (req, res) => {
+// Test OpenAI API
+router.get('/test-openai', async (req, res) => {
   try {
-    if (!config.NEBIUS_API_KEY || config.NEBIUS_API_KEY === 'your-nebius-api-key-here') {
-      return res.status(500).json({ error: 'Nebius API key not configured' });
+    if (!config.OPENAI_API_KEY || config.OPENAI_API_KEY === 'your-openai-api-key-here') {
+      return res.status(500).json({ error: 'OpenAI API key not configured' });
     }
     
     const testPrompt = 'Extract JSON from this resume: John Doe, email: john@test.com, skills: JavaScript. Return: {"name": "John Doe", "email": "john@test.com", "skills": ["JavaScript"]}';
     
-    const response = await callNebius(testPrompt);
+    const response = await callOpenAI(testPrompt);
     
     res.json({
       success: true,
-      model: config.NEBIUS_MODEL_ID,
+      model: config.OPENAI_MODEL_ID,
       response: response,
       generated_text: response
     });
   } catch (error) {
-    console.error('Nebius Test Error:', error);
+    console.error('OpenAI Test Error:', error);
     res.status(500).json({ 
       error: error.message,
-      model: config.NEBIUS_MODEL_ID,
-      apiKeyPrefix: config.NEBIUS_API_KEY.substring(0, 8) + '...'
+      model: config.OPENAI_MODEL_ID,
+      apiKeyPrefix: config.OPENAI_API_KEY.substring(0, 8) + '...'
     });
   }
 });
@@ -166,8 +166,8 @@ router.post('/analyze', upload.single('file'), async (req, res) => {
     // If no cached data available, parse with LLM
     if (!json) {
       const prompt = buildPrompt(resumeText, filtersArray, message);
-      rawResponse = await callNebius(prompt);
-      console.log('Nebius Raw Response:', rawResponse); // Debug log
+      rawResponse = await callOpenAI(prompt);
+      console.log('OpenAI Raw Response:', rawResponse); // Debug log
       json = extractJsonFromString(rawResponse);
       
       // Cache the result if we have a submissionId
@@ -188,7 +188,7 @@ router.post('/analyze', upload.single('file'), async (req, res) => {
     if (!json) {
       return res.status(200).json({
         ok: true,
-        model: config.NEBIUS_MODEL_ID,
+        model: config.OPENAI_MODEL_ID,
         usedFilters: filtersArray,
         structured: null,
         raw: rawResponse
@@ -197,7 +197,7 @@ router.post('/analyze', upload.single('file'), async (req, res) => {
 
     res.json({
       ok: true,
-      model: config.NEBIUS_MODEL_ID,
+      model: config.OPENAI_MODEL_ID,
       usedFilters: filtersArray,
       structured: json,
       raw: rawResponse

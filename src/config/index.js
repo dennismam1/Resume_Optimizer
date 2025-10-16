@@ -14,6 +14,11 @@ const config = {
   NEBIUS_MODEL_ID: process.env.NEBIUS_MODEL_ID,
   NEBIUS_API_URL: process.env.NEBIUS_API_URL,
   
+  // OpenAI API configuration
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  OPENAI_MODEL_ID: process.env.OPENAI_MODEL_ID || 'gpt-4o-mini',
+  OPENAI_API_URL: process.env.OPENAI_API_URL || 'https://api.openai.com/v1/chat/completions',
+  
   // File upload configuration
   UPLOAD_DIR: process.env.UPLOAD_DIR 
     ? path.resolve(process.env.UPLOAD_DIR)

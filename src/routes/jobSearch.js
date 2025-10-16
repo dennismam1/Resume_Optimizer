@@ -1,11 +1,11 @@
 const express = require('express');
 const { Submission } = require('../models/Submission');
 const { getOrParseResumeData } = require('../utils/dataCache');
-const { callNebius, extractJsonFromString } = require('../services/nebiusService');
+const { callOpenAI, extractJsonFromString } = require('../services/openaiService');
 
 const router = express.Router();
 
-// Generate job suggestions using Nebius from parsed resume data
+// Generate job suggestions using OpenAI from parsed resume data
 // GET /api/job-suggestions?submissionId=...&location=...&entryType=...
 router.get('/job-suggestions', async (req, res) => {
   try {
@@ -29,7 +29,7 @@ router.get('/job-suggestions', async (req, res) => {
       'full_name', 'email', 'current_title', 'target_title', 'years_of_experience', 'skills', 'education', 'seniority_level', 'location'
     ], '');
 
-    // Build a prompt for Nebius to suggest jobs
+    // Build a prompt for OpenAI to suggest jobs
     const safeLocation = location || (resumeData.location || 'Remote');
     const years = typeof resumeData.years_of_experience === 'number' ? `${resumeData.years_of_experience} years` : (resumeData.years_of_experience || '');
     const title = resumeData.current_title || resumeData.target_title || '';
@@ -73,7 +73,7 @@ Instructions:
 - Links guidance: Provide search result URLs on major boards only (e.g., LinkedIn Jobs, Indeed, Glassdoor) using the suggested title and location. Do NOT fabricate direct posting URLs. Always include https:// and encode spaces.
 `;
 
-    const raw = await callNebius(prompt, {
+    const raw = await callOpenAI(prompt, {
       maxTokens: 2000,
       temperature: 0.2,
       top_p: 0.9,

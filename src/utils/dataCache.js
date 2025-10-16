@@ -1,6 +1,6 @@
 const { Submission } = require('../models/Submission');
 const { extractTextFromFile, extractTextFromUrl } = require('./textExtraction');
-const { callNebius, extractJsonFromString } = require('../services/nebiusService');
+const { callOpenAI, extractJsonFromString } = require('../services/openaiService');
 const { buildPrompt, buildJobPostingKeywordPrompt } = require('./promptBuilders');
 
 /**
@@ -33,7 +33,7 @@ async function getOrParseResumeData(item, filtersArray = [], message = '') {
   // Parse resume data using LLM
   console.log('Parsing resume data with LLM for submission:', item._id);
   const resumePrompt = buildPrompt(resumeText, filtersArray, message);
-  const resumeResponse = await callNebius(resumePrompt);
+  const resumeResponse = await callOpenAI(resumePrompt);
   const resumeData = extractJsonFromString(resumeResponse);
 
   if (!resumeData) {
@@ -83,7 +83,7 @@ async function getOrParseJobPostingData(item) {
   // Parse job posting data using LLM
   console.log('Parsing job posting data with LLM for submission:', item._id);
   const jobPostingPrompt = buildJobPostingKeywordPrompt(jobPostingText);
-  const jobPostingResponse = await callNebius(jobPostingPrompt);
+  const jobPostingResponse = await callOpenAI(jobPostingPrompt);
   const jobPostingData = extractJsonFromString(jobPostingResponse);
 
   if (!jobPostingData) {

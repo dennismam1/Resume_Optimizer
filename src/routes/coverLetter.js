@@ -1,7 +1,7 @@
 const express = require('express');
 const { Submission } = require('../models/Submission');
 const { extractTextFromFile } = require('../utils/textExtraction');
-const { callNebius, extractJsonFromString } = require('../services/nebiusService');
+const { callOpenAI, extractJsonFromString } = require('../services/openaiService');
 const { buildPrompt, buildJobPostingKeywordPrompt, buildCoverLetterPrompt } = require('../utils/promptBuilders');
 const { generateWordDocument, generatePDFDocument } = require('../utils/documentGeneration');
 const { getOrParseBothData } = require('../utils/dataCache');
@@ -28,13 +28,13 @@ router.post('/generate-cover-letter', async (req, res) => {
       req.user?.id
     );
 
-    // Generate cover letter using Nebius
+    // Generate cover letter using OpenAI
     const coverLetterPrompt = buildCoverLetterPrompt(resumeText, jobPostingText, resumeData, jobPostingData, { tone, length });
-    const coverLetterResponse = await callNebius(coverLetterPrompt);
+    const coverLetterResponse = await callOpenAI(coverLetterPrompt);
 
     return res.json({
       ok: true,
-      model: config.NEBIUS_MODEL_ID,
+      model: config.OPENAI_MODEL_ID,
       type: 'cover_letter',
       cover_letter: coverLetterResponse,
       resume_data: resumeData,
@@ -67,7 +67,7 @@ router.post('/export-cover-letter/word', async (req, res) => {
 
     // Generate cover letter
     const coverLetterPrompt = buildCoverLetterPrompt(resumeText, jobPostingText, resumeData, jobPostingData, { tone, length });
-    const coverLetterText = await callNebius(coverLetterPrompt);
+    const coverLetterText = await callOpenAI(coverLetterPrompt);
 
     // Generate Word document
     const wordBuffer = await generateWordDocument(coverLetterText, resumeData.full_name);
@@ -106,7 +106,7 @@ router.post('/export-cover-letter/pdf', async (req, res) => {
 
     // Generate cover letter
     const coverLetterPrompt = buildCoverLetterPrompt(resumeText, jobPostingText, resumeData, jobPostingData, { tone, length });
-    const coverLetterText = await callNebius(coverLetterPrompt);
+    const coverLetterText = await callOpenAI(coverLetterPrompt);
 
     // Generate PDF document
     const pdfBuffer = await generatePDFDocument(coverLetterText, resumeData.full_name);
